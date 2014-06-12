@@ -295,7 +295,11 @@ if __name__ == '__main__':
     pf.set_film_type(cnf.film_type)
     pf.set_size( cnf.perf_size )
     pf.cx = cnf.perf_cx
-    pf.set_roi( cnf.perf_cx, cnf.perf_size, cam.cam.MAX_IMAGE_RESOLUTION )
+    try:
+	pf.set_roi( cnf.perf_cx, cnf.perf_size, cam.cam.MAX_IMAGE_RESOLUTION )
+    except:
+	print "Cannot set ROI - run setup and select a perforation"
+	quit()
 
     print('Job:%s  %d-%d : %d frames'%(job_name,start_frame,end_frame,frames_count))
     print('Shutter speed: %d gain_r:%.3f gain_b:%.3f'%(cnf.shutter_speed,cnf.awb_gains[0],cnf.awb_gains[1]) )

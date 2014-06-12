@@ -1,4 +1,4 @@
-# RPi Telecine - Perforation finding and detection#"""
+# RPi Telecine - Perforation finding and detection
 #
 # Perforation location and frame extraction for Super 8 and
 # Standard 8 film.
