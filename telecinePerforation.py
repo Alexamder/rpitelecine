@@ -67,7 +67,6 @@ import numpy as np
 import cv2
 import scipy.ndimage.measurements as nd
 from scipy import stats
-from telecineImgproc import display_image
 
 
 class telecinePerforation():
