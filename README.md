@@ -11,8 +11,11 @@ or dense film.
 Once captured, the folder of image files can be transferred to a PC for further processing.
 
 Design was somewhat inspired by the [Kinograph project](http://kinograph.cc/)
+
 3d printed Gate was inspired [by this design](http://www.mets-telecinesystem.co.uk/index.php/how-its-made/making-the-film-gate).
+
 Chassis makes use of [Makerbeam and accessories](http://www.makerbeam.eu/)
+
 Code makes use of:
 Dave Hughes' [Python picamera library](https://pypi.python.org/pypi/picamera/1.5)
 [OpenCV Python bindings](http://opencv.org/)
@@ -20,3 +23,10 @@ Numpy and Scipy
 
 This is a work in progress, and hasn't yet been used on any precious films. It's a good idea to
 test using only 'disposable films'. Ebay is a good source of old 'home movies'.
+
+Examples
+--------
+
+Derby Day: http://youtu.be/9bVeMD78gXc
+
+Blackpool illuminations: http://youtu.be/ZH1QqgxNLk8
