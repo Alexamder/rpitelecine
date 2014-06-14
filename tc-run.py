@@ -271,7 +271,7 @@ def run_job():
 	cam.close_cam()
 	job_finished = True	# Signals the writing thread to finish
 	while still_writing:
-	    # Wait untill writing queue os empty
+	    # Wait until writing queue is empty
 	    time.sleep(0.1)
     jt = job_time.stop()
     minutes = jt // 60

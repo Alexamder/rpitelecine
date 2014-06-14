@@ -1,7 +1,5 @@
 # RPi Telecine Camera Control
 #
-# TODO update for python-picamera 1.5 which can return Numpy array directly
-#
 # Code to encapsulate the operation of the camera.
 #	
 # Basically this isolates the fixed settings we use during the
@@ -9,11 +7,12 @@
 # that can be used by openCV.
 #	
 # Prerequisites:
-# Uses Numpy.
 # Uses Python-picamera by Dave Hughes from: 
 # https://pypi.python.org/pypi/picamera/
 # or use sudo apt-get install python-picamera on your Pi.
 #	
+# Uses array API of Picamera 1.5+ to return a Numpy array
+#
 # As of May 2014, it seems to be necessary to set the memory split
 # in raspi-config to be 192M, otherwise we seem to get MMAL 
 # out-of-memory errors.
@@ -52,13 +51,13 @@
 from __future__ import division
 import io
 import time
-import numpy as np
 import picamera
+import picamera.array 
 
 # Use a stream for storing the captured image to save using the SD card
 # for intermediate storage
-stream = io.BytesIO()	
 cam = picamera.PiCamera()
+
 
 def setup_cam(awb_gains,shutter):
 	""" 
@@ -74,15 +73,11 @@ def setup_cam(awb_gains,shutter):
 	cam.framerate = 10
 	cam.awb_gains=awb_gains
 	cam.awb_mode='off'
-	#cam.meter_mode='backlit'
 	cam.shutter_speed=shutter
-	
-	#cam.exposure_compensation = 0
 	cam.preview_fullscreen = True
 	cam.vflip=True
-	#cam.start_preview()
 	# Warm up time
-	time.sleep(2)
+	time.sleep(1)
 	
 def close_cam():
 	cam.close()
@@ -95,16 +90,9 @@ def take_picture():
 	Maybe in future there will be a direct to Numpy method,
 	avoiding the stream object
 	"""
-	stream.seek(0)
-	cam.capture(stream, format='bgr')
-	stream.seek(0)
-	# Calculate the actual image size in the stream (accounting for rounding
-	# of the resolution)
-	width,height = cam.resolution
-	fwidth = (width + 31) // 32 * 32
-	fheight = (height + 15) // 16 * 16
-	return np.fromstring(stream.read(), dtype=np.uint8).\
-        reshape((fheight, fwidth, 3))[:height, :width, :]
+	with picamera.array.PiRGBArray(cam) as output:
+	    cam.capture(output, format='bgr')
+	    return output.array
         
 def take_bracket_pictures():
 	""" 
@@ -117,9 +105,13 @@ def take_bracket_pictures():
 	# cam.exposure_compensation doesn't seem to work with the fixed 
 	# settings we use - so increase shutter time instead
 	imgs = []
-	imgs.append( take_picture() )
-	cam.shutter_speed = old_shutter*4
-	imgs.append( take_picture() )
+	with picamera.array.PiRGBArray(cam) as output:
+	    cam.capture(output, format='bgr')
+	    imgs.append( output.array )
+	    cam.shutter_speed = old_shutter*4
+	    output.truncate(0)
+	    cam.capture(output, format='bgr')
+	    imgs.append( output.array )
 	cam.shutter_speed = old_shutter
 	return imgs
 	
