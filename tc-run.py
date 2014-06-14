@@ -273,13 +273,15 @@ def run_job():
 	while still_writing:
 	    # Wait untill writing queue os empty
 	    time.sleep(0.1)
-    jt = time.gmtime(job_time.stop())
+    jt = job_time.stop()
+    minutes = jt // 60
+    seconds = jt % 60
     job_finished = True		
     ave_per_frame = sum(frame_times) / len(frame_times)
     ave_camera_time = sum(taking_times) / len(taking_times)
     # Some stats
     print('%d frames'%(len(frame_times)))
-    print('Elapsed time {}'.format(time.strftime('%H:%M:%S')))
+    print('Elapsed time {:.0f} mins {:.1f} secs'.format(minutes,seconds))
     print('Average time per frame: {:.2f} secs'.format(ave_per_frame))
     print('Fastest frame: {:.2f} secs'.format(min(frame_times)))
     print('Slowest frame: {:.2f} secs'.format(max(frame_times)))
