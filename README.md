@@ -17,9 +17,10 @@ Design was somewhat inspired by the [Kinograph project](http://kinograph.cc/)
 Chassis makes use of [Makerbeam and accessories](http://www.makerbeam.eu/)
 
 Code makes use of:
-Dave Hughes' [Python picamera library](https://pypi.python.org/pypi/picamera/1.5)
-[OpenCV Python bindings](http://opencv.org/)
-Numpy and Scipy
+
+* Dave Hughes' [Python picamera library](https://pypi.python.org/pypi/picamera/1.5)
+* [OpenCV Python bindings](http://opencv.org/)
+* Numpy and Scipy
 
 This is a work in progress, and hasn't yet been used on any precious films. It's a good idea to
 test using only 'disposable films'. Ebay is a good source of old 'home movies'.
@@ -27,6 +28,7 @@ test using only 'disposable films'. Ebay is a good source of old 'home movies'.
 Examples
 --------
 
-Derby Day: http://youtu.be/9bVeMD78gXc
-
-Blackpool illuminations: http://youtu.be/ZH1QqgxNLk8
+* Overview: http://youtu.be/xm3jTsKSOtE
+* London to Brighton: http://youtu.be/7-SdT0FMGkM
+* Derby Day: http://youtu.be/9bVeMD78gXc
+* Blackpool illuminations: http://youtu.be/ZH1QqgxNLk8
