@@ -163,26 +163,11 @@ def calibrate_transport(frames=18,d=True):
     else:
 	cnf.ave_steps_bk = ave_steps
 
-def detect_perforation():
-    # Does a fresh perforation detection
-    # and sets up config data for expected size
-    for n in range(5):
-	pf.reset_detection()
-    	img = cam.take_picture()
-	perf_found = pf.find(img)
-	if perf_found:
-	    break
-	# Move film until we find a perforation
-	tc.steps_forward(100)
-    if perf_found:
-	cnf.perf_size = pf.perforation[-2:]
-	cnf.perf_centre = (pf.cx,pf.cy)
-	pf.set_size(cnf.perf_size)
-
 def draw_perforation(img):
     # Draw the perforation on the image
     # Calculate various metrics of the perforation
-    x, y, w, h = pf.perforation
+    x, y = pf.position
+    w, h = pf.size
     r, b = ( x+w , y+h )	# Right and bottom
     cnf.perf_size = (w,h)
     cnf.perf_cx = pf.cx
@@ -276,17 +261,14 @@ def setup_telecine():
 		x = x * scale_display
 		y = y * scale_display
 		img = cam.take_picture()
-		gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-		found, perforation = pf.find_perf_edges(gray,(x,y))
+		found = pf.find_perf_edges(img,(x,y))
 		if found:
-		    print "Found perf",perforation
-		    x,y,w,h = perforation
-		    cx = x+(w//2)
-		    pf.set_roi( cx, (w,h), gray.shape[::-1])
-		    pf.set_size( (w,h) )
-		    perf_found = pf.find(gray)
+		    x,y = pf.position
+		    w,h = pf.size
+		    perf_found = pf.find(img)
 		    draw_perforation(img)
-		    caption = "Perforation found: {}".format(pf.perforation)
+		    caption = "Perforation found: {} {}".format(pf.position,pf.size)
+		    print caption
 		    display_image('Telecine',img,reduction=scale_display,text=caption)
 		
 	cv2.namedWindow('Telecine')
@@ -312,7 +294,7 @@ def setup_telecine():
 		    # Find perforation
 		    perf_found = pf.find(img)
 		    if perf_found:
-			print('Perforation found: {}'.format(pf.perforation))
+			print('Perforation found: {} {}'.format(pf.position,pf.size))
 		    else:
 			print('Perforation not found.')
 	    if cnf.show_gray:
@@ -342,9 +324,6 @@ def setup_telecine():
 	    elif key==ord('o'):
 		print('Centering frame')
 		centre_frame()
-	    elif key==ord('i'):
-		print('Redetecting perforation')
-		detect_perforation()
 	    elif key==ord('#'):
 		print('Calibrating transport')
 		print('Discovering pixels per motor step')
@@ -449,9 +428,10 @@ if __name__ == '__main__':
     pf.set_film_type(cnf.film_type)
     if cnf.perf_size:
 	pf.set_size( cnf.perf_size )
+	pf.img_size = cam.cam.MAX_IMAGE_RESOLUTION
 	if cnf.perf_cx:
 	    pf.cx = cnf.perf_cx
-	    pf.set_roi( cnf.perf_cx, cnf.perf_size, cam.cam.MAX_IMAGE_RESOLUTION )
+	    pf.set_roi()
     
     if args.brackets:
 	print('Bracketing on')

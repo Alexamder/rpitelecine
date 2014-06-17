@@ -108,8 +108,7 @@ def parse_commandline():
 
 def make_crop():
     # Return a Numpy slice to crop the image around the perforation
-    cy = pf.cy
-    cx = pf.perforation[0]+(pf.perforation[2]//2)
+    cx,cy = pf.centre
     crop_x = cx+cnf.crop_offset[0]
     crop_y = cy+cnf.crop_offset[1]
     return pf.crop_slice( (crop_x, crop_y, cnf.crop_size[0],cnf.crop_size[1]) )
@@ -168,11 +167,8 @@ def single_picture(current_frame):
 	failedname = 'failed-' + fname
 	failedname = os.path.join( fpath, failedname )
 	q.put( (failedname,img) )
-	if pf.prev_perforation:
+	if pf.prev_position != (0,0):
 	    # Use last successful crop as a basis 
-	    pf.perforation = pf.prev_perforation
-	    pf.cx = pf.perforation[0]+(pf.perforation[2]//2)
-	    pf.cy = pf.perforation[1]+(pf.perforation[3]//2)
 	    found = True
     else:
 	# Reset fail count if we found the perforation
@@ -245,7 +241,7 @@ def run_job():
     try:
 	tc.light_on()
 	cam.setup_cam(cnf.awb_gains, cnf.shutter_speed)
-	
+	centre_frame()
 	frame_time = Stopwatch()
 	frame_times = []
 	end_frame = end_frame + capture_direction	# Make list inclusive
@@ -297,8 +293,9 @@ if __name__ == '__main__':
     pf.set_film_type(cnf.film_type)
     pf.set_size( cnf.perf_size )
     pf.cx = cnf.perf_cx
+    pf.img_size = cam.cam.MAX_IMAGE_RESOLUTION
     try:
-	pf.set_roi( cnf.perf_cx, cnf.perf_size, cam.cam.MAX_IMAGE_RESOLUTION )
+	pf.set_roi()
     except:
 	print "Cannot set ROI - run setup and select a perforation"
 	quit()
