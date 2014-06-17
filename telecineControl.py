@@ -128,53 +128,49 @@ class tcControl():
 	self.m1.set_direction(d)
 	self.m2.set_direction(d)
 
-
-    def step_forward(self):
-	""" 
-	Take one step forward
-	"""
-	if not self.direction:
-	    self.change_direction( True )
-	self.take_up_counter += 1
-	if self.take_up_counter>=self.take_up_steps:
-	    self.reel2.pulse()
-	    self.take_up_counter=0
-	if self.step_counter<self.tension_steps:
-	    # Push film one step
-	    self.m1.step()
-	    self.step_counter += 1
-	else:
-	    # Skip pushing
-	    self.step_counter = 0
-	# Pull film one step
-	self.m2.step()
-    
     def steps_forward(self,steps=1):
-	for n in xrange(steps):
-	    self.step_forward()
-
-	    
-    def step_back(self):
 	""" 
-	Take one step backwards
+	Take steps forward - pulse the takeup reel and tension film
+	by ignoring push step occasionally
 	"""
-	if self.direction:
-	    self.change_direction( False )
-	self.take_up_counter += 1
-	if self.take_up_counter==self.take_up_steps:
-	    self.reel1.pulse()
-	    self.take_up_counter=0
-	if self.step_counter<self.tension_steps:
-	    self.m2.step()
-	    self.step_counter += 1
-	else:
-	    self.step_counter = 0
-	self.m1.step()	
-
-
-    def steps_back(self,steps=1):
+	m1step = self.m1.step	# Speed up loop a bit by not evaluating dots
+	m2step = self.m2.step
 	for n in xrange(steps):
-	    self.step_back()
+	    if not self.direction:
+		self.change_direction( True )
+	    self.take_up_counter += 1
+	    if self.take_up_counter>=self.take_up_steps:
+		self.reel2.pulse()
+		self.take_up_counter=0
+	    if self.step_counter<self.tension_steps:
+		# Push film one step
+		m1step()
+		self.step_counter += 1
+	    else:
+		# Skip pushing
+		self.step_counter = 0
+	    # Pull film one step
+	    m2step()
+    
+    def steps_back(self,steps=1):
+	""" 
+	Take steps backwards
+	"""
+	m1step = self.m1.step	# Speed up loop a bit by not evaluating dots
+	m2step = self.m2.step
+	for n in xrange(steps):
+	    if self.direction:
+		self.change_direction( False )
+	    self.take_up_counter += 1
+	    if self.take_up_counter==self.take_up_steps:
+		self.reel1.pulse()
+		self.take_up_counter=0
+	    if self.step_counter<self.tension_steps:
+		m2step()
+		self.step_counter += 1
+	    else:
+		self.step_counter = 0
+	    m1step()	
 
     def tension_film(self,steps=200):
 	# Run steppers in opposite direction for a short period - Tightens up the film
