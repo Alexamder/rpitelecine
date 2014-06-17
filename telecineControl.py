@@ -57,7 +57,7 @@
 
 
 from __future__ import division
-import wiringpi2 as wiringpi
+from wiringpi2 import *
 
 class tcControl():
     
@@ -92,8 +92,8 @@ class tcControl():
     step_counter = 0
     
     def __init__(self):
-	wiringpi.wiringPiSetupSys()
-	wiringpi.mcp23s17Setup(self.pin_base, 0, 0) 
+	wiringPiSetupSys()
+	mcp23s17Setup(self.pin_base, 0, 0) 
 	# Stepper Motors
 	self.m1 = stepperMotor(self.m1_step_pin, self.m1_dir_pin, self.m1_en_pin)
 	self.m2 = stepperMotor(self.m2_step_pin, self.m2_dir_pin, self.m2_en_pin)
@@ -135,12 +135,10 @@ class tcControl():
 	"""
 	if not self.direction:
 	    self.change_direction( True )
-		
 	self.take_up_counter += 1
 	if self.take_up_counter>=self.take_up_steps:
 	    self.reel2.pulse()
 	    self.take_up_counter=0
-    
 	if self.step_counter<self.tension_steps:
 	    # Push film one step
 	    self.m1.step()
@@ -152,7 +150,7 @@ class tcControl():
 	self.m2.step()
     
     def steps_forward(self,steps=1):
-	for n in range(0,steps):
+	for n in xrange(steps):
 	    self.step_forward()
 
 	    
@@ -162,32 +160,28 @@ class tcControl():
 	"""
 	if self.direction:
 	    self.change_direction( False )
-	
 	self.take_up_counter += 1
 	if self.take_up_counter==self.take_up_steps:
 	    self.reel1.pulse()
 	    self.take_up_counter=0
-	
 	if self.step_counter<self.tension_steps:
-	    # Push film one step
 	    self.m2.step()
 	    self.step_counter += 1
 	else:
-	    # Skip pushing
 	    self.step_counter = 0
 	self.m1.step()	
 
 
     def steps_back(self,steps=1):
-	for n in range(0,steps):
+	for n in xrange(steps):
 	    self.step_back()
 
-    def tension_film(self,steps=300):
+    def tension_film(self,steps=200):
 	# Run steppers in opposite direction for a short period - Tightens up the film
 	d = self.direction
 	self.m1.set_direction(False)
 	self.m2.set_direction(True)	
-	for n in range(0,steps):
+	for n in xrange(steps):
 	    self.m1.step()	
 	    self.m2.step()	
 	self.m1.set_direction(d)
@@ -240,39 +234,39 @@ class stepperMotor():
         self.step_pin = step_pin
         self.dir_pin = dir_pin
         self.en_pin  = en_pin
-        wiringpi.pinMode( step_pin, 1 )         # Output
-        wiringpi.pinMode( dir_pin, 1 )          # Output
-        wiringpi.pinMode( en_pin, 1 )       	# Output
+        pinMode( step_pin, 1 )         # Output
+        pinMode( dir_pin, 1 )          # Output
+        pinMode( en_pin, 1 )       	# Output
         self.on()
         self.direction = True
              
     def on(self):
         # enable motor - set motorOn flag
-        wiringpi.digitalWrite(self.en_pin,False)
+        digitalWrite(self.en_pin,False)
         self.motor_on = True
         
     def off(self):
         # if enable pin is used, de-energise the motor coils
-        wiringpi.digitalWrite(self.en_pin,True)
+        digitalWrite(self.en_pin,True)
         self.motor_on = False
 
     def set_direction( self,direction=True ):    
 	# set Direction of motor - true=ccw; false=cw
 	self.direction = 1 if direction else 0
-	wiringpi.digitalWrite(self.dir_pin, self.direction)
+	digitalWrite(self.dir_pin, self.direction)
         
     def step(self):
 	# Make a step
 	# Big Easy Driver will step when the pin rises
 	# Should be on and off for at least 1uS 
-	wiringpi.digitalWrite(self.step_pin,True)
-	wiringpi.delayMicroseconds(self.delay_on)
-	wiringpi.digitalWrite(self.step_pin,False)
-	wiringpi.delayMicroseconds(self.delay_off)
+	digitalWrite(self.step_pin,True)
+	delayMicroseconds(self.delay_on)
+	digitalWrite(self.step_pin,False)
+	delayMicroseconds(self.delay_off)
         
     def steps(self,s):
         # Go s steps
-        for i in range(0,s):
+        for i in xrange(0,s):
             self.step()
     
     def rotate_full(self):
@@ -294,13 +288,13 @@ class ledControl:
 
     def __init__(self,pin):
 	self.pin = pin
-	wiringpi.pinMode( pin, True )
+	pinMode( pin, True )
 
     def on(self):
-	wiringpi.digitalWrite( self.pin, True )
+	digitalWrite( self.pin, True )
 
     def off(self):
-	wiringpi.digitalWrite( self.pin, False )
+	digitalWrite( self.pin, False )
 
 
 class reelMotor:
@@ -312,18 +306,18 @@ class reelMotor:
 
     def __init__(self,pin):
 	self.pin = pin
-	wiringpi.pinMode( pin, True )
+	pinMode( pin, True )
 
     def on(self):
-	wiringpi.digitalWrite( self.pin, True )
+	digitalWrite( self.pin, True )
 
     def off(self):
-	wiringpi.digitalWrite( self.pin, False )
+	digitalWrite( self.pin, False )
 
     def pulse(self):
-	wiringpi.digitalWrite( self.pin, True )
-	wiringpi.delay( self.pulse_delay )
-	wiringpi.digitalWrite( self.pin, False )
+	digitalWrite( self.pin, True )
+	delay( self.pulse_delay )
+	digitalWrite( self.pin, False )
 
 
 class shutterRelease():
@@ -346,20 +340,20 @@ class shutterRelease():
     def __init__(self,focus_pin, shutter_pin):
         self.focus_pin = focus_pin
         self.shutter_pin = shutter_pin
-        wiringpi.pinMode( focus_pin, 1 )          # Output
-        wiringpi.pinMode( shutter_pin, 1 )          # Output
-        wiringpi.digitalWrite(self.focus_pin,False)
-        wiringpi.digitalWrite(self.shutter_pin,False)
+        pinMode( focus_pin, 1 )          # Output
+        pinMode( shutter_pin, 1 )          # Output
+        digitalWrite(self.focus_pin,False)
+        digitalWrite(self.shutter_pin,False)
         
     def wake_camera(self):
-        wiringpi.digitalWrite(self.focus_pin,True)
-        wiringpi.delay( self.wake_delay )
-        wiringpi.digitalWrite(self.focus_pin,False)
+        digitalWrite(self.focus_pin,True)
+        delay( self.wake_delay )
+        digitalWrite(self.focus_pin,False)
           
     def fire_shutter(self):
-        wiringpi.digitalWrite(self.shutter_pin,True)
-        wiringpi.delay( self.shutter_delay )
-        wiringpi.digitalWrite(self.shutter_pin,False)
+        digitalWrite(self.shutter_pin,True)
+        delay( self.shutter_delay )
+        digitalWrite(self.shutter_pin,False)
         
         
 # Test the hardware
@@ -367,11 +361,11 @@ if __name__ == '__main__':
     tc =  tcControl()
     tc.light_on()
     for j in range(1,15):
-	wiringpi.delay(500)
+	delay(500)
 	tc.steps_forward(310)
-    wiringpi.delay(2000)
+    delay(2000)
     for j in range(1,15):
-	wiringpi.delay(500)
+	delay(500)
 	tc.steps_back(310)	
     tc.clean_up()
     
