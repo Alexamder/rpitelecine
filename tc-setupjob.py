@@ -311,7 +311,6 @@ def setup_telecine():
 	    # Disply image and wait for user input	
 	    display_image('Telecine',img,reduction=scale_display,text=caption)
 	    key = 0xFFFF & cv2.waitKey(0) 
-	    print "Key:",key
 	    if key==cv2_keys['Escape']:
 		capturing = False
 		saving = False
