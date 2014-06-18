@@ -311,6 +311,7 @@ def setup_telecine():
 	    # Disply image and wait for user input	
 	    display_image('Telecine',img,reduction=scale_display,text=caption)
 	    key = 0xFFFF & cv2.waitKey(0) 
+	    print "Key:",key
 	    if key==cv2_keys['Escape']:
 		capturing = False
 		saving = False
@@ -318,9 +319,11 @@ def setup_telecine():
 		capturing = False
 		saving = True
 	    elif key==cv2_keys['Home']:
-		tc.steps_forward(30)
+		print("Nudge forward")
+		tc.steps_forward(40)
 	    elif key==cv2_keys['End']:
-		tc.steps_back(30)
+		print("Nudge backward")
+		tc.steps_back(40)
 	    elif key==ord('o'):
 		print('Centering frame')
 		centre_frame()

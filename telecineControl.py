@@ -298,7 +298,7 @@ class reelMotor:
 	Class to control DC motors for film spools
 	The motors are controlled simply by switching on a wiringpi pin
     """
-    pulse_delay = 50	# Pulse delay in milliseconds
+    pulse_delay = 35	# Pulse delay in milliseconds
 
     def __init__(self,pin):
 	self.pin = pin

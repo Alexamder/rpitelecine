@@ -206,11 +206,8 @@ def bracket_pictures(current_frame):
 			os.path.join( fpath, ('failed-' + fnames[1]) ) ]
 	q.put( (failednames[0],imgs[0]) )
 	q.put( (failednames[1],imgs[1]) )
-	if pf.prev_perforation:
+	if pf.prev_position != (0,0):
 	    # Use last successful crop as a basis 
-	    pf.perforation = pf.prev_perforation
-	    pf.cx = pf.perforation[0]+(pf.perforation[2]//2)
-	    pf.cy = pf.perforation[1]+(pf.perforation[3]//2)
 	    found = True
     else:
 	# Reset fail count if we found the perforation
