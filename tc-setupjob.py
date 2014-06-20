@@ -84,33 +84,27 @@ def get_pixels_per_step(times=5):
 	img = cam.take_picture()
 	perf_found = pf.find(img)
 	centre = pf.cy
-	print('{} a-centre:{}'.format(perf_found,centre))
 	tc.steps_forward(steps)
 	img = cam.take_picture()
 	perf_found1 = pf.find(img)
 	if perf_found1:
-	    print('{} b-centre:{}'.format(perf_found,pf.cy))
 	    diff = centre - pf.cy
-	    print 'Diff b-a: ',diff
 	    pixels_per_step = diff/float(steps)
 	    counts.append(pixels_per_step)
 	    centre = pf.cy
-	print('{} c-centre:{}'.format(perf_found,centre))
 	tc.steps_back(steps*2)
 	img = cam.take_picture()
 	perf_found2 = pf.find(img)
 	if perf_found2:
 	    diff = pf.cy - centre
-	    print('{} d-centre:{}'.format(perf_found,pf.cy))
-	    print 'Diff d-c: ',diff
 	    pixels_per_step = diff/float(steps*2)
 	    counts.append(pixels_per_step)
 	tc.steps_forward(steps)
 	if not(perf_found1 and perf_found2):
 	    # Perforation went out of view - so reduce number of steps
 	    steps = int(steps/1.4)
-    print(counts)
     cnf.pixels_per_step = sum(counts)/len(counts)
+    print("Pixels per step:{}".format(cnf.pixels_per_step))
 
 def calibrate_transport(frames=18,d=True):
     # Calibrate the film transport over a number of frames
@@ -134,8 +128,8 @@ def calibrate_transport(frames=18,d=True):
 	    perf_found = pf.find(img)
 	    if perf_found:
 		diff = pf.y_diff
-		s = int(abs(diff)/pixels_per_step)
-		if s<5: s=5
+		s = int(round(abs(diff)/pixels_per_step))
+		if s<2: s=2
 		print('Diff: %d'%(diff))
 		if diff < -10:
 		    tc.steps_back(s)
@@ -178,14 +172,13 @@ def draw_perforation(img):
     # Crop
     if cnf.crop_size == [0,0]:
 	# Calculate crop size from size of perforation
-	cnf.crop_size[1] = int(round(h*pf.frame_height_mult[cnf.film_type]*1.2))
+	cnf.crop_size[1] = int(round(h*pf.frame_height_mult[cnf.film_type]*1.1))
 	cnf.crop_size[0] = int(round(cnf.crop_size[1] * 1.3333))
+	cnf.crop_offset[0] = cnf.perf_size[0]//4
 	if cnf.film_type == 'super8':
-	    cnf.crop_offset[0] = 0
 	    cnf.crop_offset[1] = -(cnf.crop_size[1]//2)
 	else: # std8
-	    cnf.crop_offset[0] = 0
-	    cnf.crop_offset[1] = -(h//2)
+	    cnf.crop_offset[1] = -(cnf.perf_size[1]//8)
     cnf.crop_x = pf.cx+cnf.crop_offset[0]
     cnf.crop_y = pf.cy+cnf.crop_offset[1]
     cv2.rectangle(img,(cnf.crop_x,cnf.crop_y),\
