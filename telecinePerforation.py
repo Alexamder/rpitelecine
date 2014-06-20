@@ -79,6 +79,13 @@ class telecinePerforation():
     # Aspect ratio of the perforations
     perf_aspect = {'super8':(0.91/1.14), 'std8':(1.8/1.23)}
     
+    # Frame size in proportion to the perforation size
+    # Used to automatically set a crop based on detected perforation. 
+    # Width is assumed to be 1.33 x height 4:3 aspect
+    # The calculations are based on the mm dimensions from the film specifications
+    frame_height_mult = {'super8':(4.23/1.143), 'std8':(3.81/1.23)}
+    frame_width_mult = {'super8':(5.46/0.91), 'std8':(4.5/1.8)}
+    
     size_margin = 0.2	# Margin around ROI - 0.2=20%
     
     size = (0,0)	# Expected size of perforation
@@ -167,7 +174,7 @@ class telecinePerforation():
 		y = (img_h//2) - (h//2)
 	    else:
 		# Standard 8 - top part of image
-		y = img_h//22  # 88 pixels with 1944px high image
+		y = img_h//40  # 48 pixels with 1944px high image
 	    # Set ROI width based on perforation size allowing a margin either side
 	    w = self.w_max // 2
 	    roi_l = max(0, self.cx-w)
@@ -191,6 +198,7 @@ class telecinePerforation():
 	the perforation are set
 	Used to set the perforation from a mouse-click in the setup routine
 	"""
+	print "Find perf edges..."
 	if len(img.shape) != 2:
 	    img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 	x,y = coord # Centre point to search from
@@ -205,7 +213,7 @@ class telecinePerforation():
 	thresh = thresh + ( (1.0 - thresh) / 5.0 )
 	# Test the area around the starting coord for pixels below mean level
 	test_location = (roi[y-margin:y+margin,x-margin:x+margin] < thresh).any()
-	#print "Test location",test_location
+	print "Test location",test_location
 	if test_location:
 	    # we're too close an edge or not in the perforation at all
 	    return False
@@ -236,6 +244,7 @@ class telecinePerforation():
 	w,h = (r-l, b-t)
 	# Check aspect ratio of perforation
 	aspect = w / float(h)
+	print "min:{} Aspect:{} max:{}".format(self.aspect_min,aspect,self.aspect_max)
 	if self.aspect_min <= aspect <= self.aspect_max:
 	    # Set perforation information - left, top, width, height
 	    self.img_size = img.shape[:2][::-1]
@@ -250,6 +259,8 @@ class telecinePerforation():
 		self.y_diff = cy - self.roi_cy
 	    else:
 		self.y_diff = 0
+	    print "cx:{} cy:{} size:{} position:{}".format(cx,cy,self.size,self.position)
+	    self.set_roi()
 	    return True
 	else:
 	    return False
