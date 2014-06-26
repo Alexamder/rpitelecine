@@ -82,13 +82,13 @@ class tcControl():
     
     # Parameters to pulse takeup reel every so often to keep film
     # wrapped around rollers
-    take_up_steps = 360
+    take_up_steps = 550
     take_up_counter = 0
     
     # Because of slippage in system skip pushing film every so often
     # Without this, film tends to start to slacken and bunch up
     # before the gate. 
-    tension_steps = 40
+    tension_steps = 50
     step_counter = 0
     
     def __init__(self):
@@ -216,8 +216,7 @@ class stepperMotor():
     whole step
     """
 
-    delay_on = 3 # Big Easy Driver requires a pulse of 1uS or longer.
-    delay_off = 3
+    delay = 2 # Big Easy Driver requires a pulse of 1uS or longer.
     motor_on = False
     
     rotation_steps = 3200
@@ -256,9 +255,9 @@ class stepperMotor():
 	# Big Easy Driver will step when the pin rises
 	# Should be on and off for at least 1uS 
 	digitalWrite(self.step_pin,True)
-	delayMicroseconds(self.delay_on)
+	delayMicroseconds(self.delay)
 	digitalWrite(self.step_pin,False)
-	delayMicroseconds(self.delay_off)
+	delayMicroseconds(self.delay)
         
     def steps(self,s):
         # Go s steps
@@ -285,6 +284,7 @@ class ledControl:
     def __init__(self,pin):
 	self.pin = pin
 	pinMode( pin, True )
+	self.off()
 
     def on(self):
 	digitalWrite( self.pin, True )
@@ -303,6 +303,7 @@ class reelMotor:
     def __init__(self,pin):
 	self.pin = pin
 	pinMode( pin, True )
+	self.off()
 
     def on(self):
 	digitalWrite( self.pin, True )

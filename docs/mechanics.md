@@ -25,7 +25,7 @@ faster and cheaper for larger items - but only in white nylon.
 
 Parts were designed in [Freecad](http://freecadweb.org/), and STL files were sent to
 the 3d printing service. Freecad allows designs to be made based on cross-sectional
-drawings, and results have been very goof.
+drawings, and results have been very good.
 
 * Film Gate
 * Pi camera mount

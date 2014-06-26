@@ -16,6 +16,8 @@
 # As of May 2014, it seems to be necessary to set the memory split
 # in raspi-config to be 192M, otherwise we seem to get MMAL 
 # out-of-memory errors.
+#
+# 
 #	
 # close_cam() should be called at the end of the program otherwise
 # it could result in memory leaks in the GPU 
@@ -49,8 +51,6 @@
 
 
 from __future__ import division
-import io
-import time
 import picamera
 import picamera.array 
 
@@ -58,37 +58,26 @@ import picamera.array
 # for intermediate storage
 cam = picamera.PiCamera()
 
-
 def setup_cam(awb_gains,shutter):
 	""" 
 	Camera settings for telecine
 	Need fixed shutter speed, AWB etc for consistency 
 	between frames. The awb_gains and shutter speed are established
-	in the job configuration/calibration routines 
-	We also are using the full still resolution of the camera
+	in the job tc-whitebalace.py
 	"""
 	cam.resolution = cam.MAX_IMAGE_RESOLUTION # 2592x1944
 	cam.ISO=100
-	cam.exposuremode = 'fixedfps'
-	cam.framerate = 10
 	cam.awb_gains=awb_gains
 	cam.awb_mode='off'
 	cam.shutter_speed=shutter
-	cam.preview_fullscreen = True
 	cam.vflip=True
-	# Warm up time
-	time.sleep(1)
 	
 def close_cam():
 	cam.close()
 
-
 def take_picture():
 	""" 
 	Returns an openCV compatible colour image 
-	Follows advanced recipe in Picamera reference
-	Maybe in future there will be a direct to Numpy method,
-	avoiding the stream object
 	"""
 	with picamera.array.PiRGBArray(cam) as output:
 	    cam.capture(output, format='bgr')
@@ -98,12 +87,10 @@ def take_bracket_pictures():
 	""" 
 	Returns two images in a list
 	One with normal exposure, and one with 2 stop longer exposure 
-	Aim to to get detail out of shadows/underexposed film
+	The aim to to get detail out of shadows/underexposed film
 	Resulting images can be combined on a PC with Hugin's enfuse utility
 	"""
 	old_shutter = cam.shutter_speed
-	# cam.exposure_compensation doesn't seem to work with the fixed 
-	# settings we use - so increase shutter time instead
 	imgs = []
 	with picamera.array.PiRGBArray(cam) as output:
 	    cam.capture(output, format='bgr')

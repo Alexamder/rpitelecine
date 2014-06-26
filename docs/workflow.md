@@ -50,6 +50,7 @@ can be cropped manually if necessary.
 Keys in setup routine
 ---------------------
 
+* 1 2 3 4	Set size of preview image (1 = full size, 4=quarter size)
 * s	Save current settings
 * Esc	Escape without saving
 * c	Toggle clipped colours

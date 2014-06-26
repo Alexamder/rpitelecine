@@ -174,7 +174,7 @@ class telecinePerforation():
 		y = (img_h//2) - (h//2)
 	    else:
 		# Standard 8 - top part of image
-		y = img_h//40  # 48 pixels with 1944px high image
+		y = img_h//20  # 97 pixels with 1944px high image
 	    # Set ROI width based on perforation size allowing a margin either side
 	    w = self.w_max // 2
 	    roi_l = max(0, self.cx-w)

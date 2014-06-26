@@ -245,12 +245,7 @@ def setup_telecine():
 	
 	def mouse_handler(event,x,y,flags,param):
 	    # mouse callback function
-
 	    if event == cv2.EVENT_LBUTTONDOWN:
-		#cv2.circle(img,(x,y),100,(255,0,0),-1)
-		#cv2.line(img,(x,0),(x,img.shape[0]),(0,255,0),4)
-		# Full range 0-1.0
-		print(x,y)
 		x = x * scale_display
 		y = y * scale_display
 		img = cam.take_picture()
@@ -372,22 +367,34 @@ def setup_telecine():
 	    elif key==ord('c'):
 		print('Toggle clipped pixels')
 		show_clipped = not show_clipped
+	    elif key==ord('1'):
+		print('Full size preview')
+		scale_display = 1
+	    elif key==ord('2'):
+		print('Half size preview')
+		scale_display = 2
+	    elif key==ord('3'):
+		print('Third size preview')
+		scale_display = 3
+	    elif key==ord('4'):
+		print('Quarter size preview')
+		scale_display = 4
 	    elif key==ord('p'):
 		print('Toggle perforation display')
 		show_perf = not show_perf
 	    elif key==ord('g'):
 		print('Toggle grayscale display')
 		cnf.show_gray = not cnf.show_gray
-	    elif key==ord('r') and cnf.awb_gains[0] > 0.9:
+	    elif key==ord('r') and cnf.awb_gains[0] > 0.3:
 		print('Decrease red gain')
 		cnf.awb_gains[0] -= cnf.awb_gains[0]*0.05
-	    elif key==ord('R') and cnf.awb_gains[0] < 3:
+	    elif key==ord('R') and cnf.awb_gains[0] < 5:
 		print('Increase red gain')
 		cnf.awb_gains[0] += cnf.awb_gains[0]*0.05
-	    elif key==ord('b') and cnf.awb_gains[0] > 0.9:
+	    elif key==ord('b') and cnf.awb_gains[0] > 0.3:
 		print('Decrease blue gain')
 		cnf.awb_gains[1] -= cnf.awb_gains[1]*0.05
-	    elif key==ord('B') and cnf.awb_gains[0] < 3:
+	    elif key==ord('B') and cnf.awb_gains[0] < 5:
 		print('Increase blue gain')
 		cnf.awb_gains[1] += cnf.awb_gains[1]*0.05			
 	    elif show_perf and perf_found:
