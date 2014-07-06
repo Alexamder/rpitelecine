@@ -52,19 +52,19 @@ can be cropped manually if necessary.
 | c	     | Toggle clipped colours                          |
 | g	     | Toggle grayscale                                |
 | d	     | Cycle through DRC settings (off,low,med,high)   |
-| - +	     | Reduce|increase shutter                         |
-| r  R	     | Reduce|increase red gain                        |
-| b  B	     | Reduce|increase blue gain                       |
+| - +	     | Reduce / increase shutter                      |
+| r  R	     | Reduce / increase red gain                     |
+| b  B	     | Reduce / increase blue gain                    |
 | p	     | Toggle perforation detection                    |
 | o	     | Centre frame                                    |
 | i	     | Redetect perforation                            |
 | #	     | Calibrate Transport (same as u/t/y)             |
 | t  y	     | Calibrate transport forward/backward            |
 | u	     | Calibrate pixels per motor step                 |
-| .  ,	     | Previous|next frame                             |
-| <  >	     | Back|forwards 18 frames                         |
-| [  ]	     | Fast wind back | forward 18 frames              |
-| {  }	     | Fast wind back | forward 180 frames             |
+| .  ,	     | Previous / next frame                          |
+| <  >	     | Back or forwards 18 frames                      |
+| [  ]	     | Fast wind back / forward 18 frames             |
+| {  }	     | Fast wind back / forward 180 frames            |
 | Arrows     | Move crop                                       |
 | PgUp	     | Make crop larger                                |
 | PgDn	     | Make crop smaller                               |
