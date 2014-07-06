@@ -237,7 +237,7 @@ def run_job():
     print('Film type: {}'.format(pf.film_type))
     try:
 	tc.light_on()
-	cam.setup_cam(cnf.awb_gains, cnf.shutter_speed)
+	cam.setup_cam(cnf.awb_gains, cnf.shutter_speed, cnf.drc, cnf.image_effect)
 	centre_frame()
 	frame_time = Stopwatch()
 	frame_times = []

@@ -168,13 +168,13 @@ class telecinePerforation():
 	    if img_h<img_w:
 		img_h,img_w = self.img_size
 	    self.img_size = (img_w,img_h)
-	    h = img_h // 3  # Use 1/2 of image height for ROI
+	    h = img_h // 3  # Use 1/3 of image height for ROI
 	    if self.film_type == 'super8':
 		# Middle of image height
 		y = (img_h//2) - (h//2)
 	    else:
 		# Standard 8 - top part of image
-		y = img_h//20  # 97 pixels with 1944px high image
+		y = img_h//50  # 39 pixels with 1944px high image
 	    # Set ROI width based on perforation size allowing a margin either side
 	    w = self.w_max // 2
 	    roi_l = max(0, self.cx-w)
@@ -185,6 +185,47 @@ class telecinePerforation():
 	    self.ROI = None
 	    raise Exception('Error - cannot set ROI')
 
+	
+    def find_bottom_edge(self,roi,x,y,thresh,margin):
+	""" Find the bottom edge of the perforation starting at the x,y position. 
+	"""
+	# Get a slice from y to the bottom of the roi, with width pixels left and right 
+	# Average across the width to get a 1d array and threshold it
+	thr = roi[y:,x-margin:x+margin].mean(axis=1) < thresh
+	# Position of transition to dark edge relative to y
+	m = thr.argmax() 
+	if m==0: m=len(thr) # If not found assume it's at the edge
+	return y + m
+
+    def find_top_edge(self,roi,x,y,thresh,margin):
+	""" Find the top edge of the perforation starting at the x,y position. 
+	"""
+	thr = roi[:y,x-margin:x+margin].mean(axis=1) < thresh
+	m = thr[::-1].argmax() # count backwards
+	if m==0: m=y
+	return y - m
+
+    def find_right_edge(self,roi,x,y,thresh,margin):
+	""" Find the rh edge of the perforation starting at the x,y position. 
+	"""
+	thr = roi[y-margin:y+margin,x:].mean(axis=0) < thresh
+	m = thr.argmax()
+	if m==0: m=len(thr)
+	return x + m
+
+    def find_left_edge(self,roi,x,y,thresh,margin):
+	""" Find the rh edge of the perforation starting at the x,y position. 
+	"""
+	thr = roi[y-margin:y+margin,:x].mean(axis=0) < thresh
+	m = thr[::-1].argmax()
+	if m==0: m=x
+	return x - m
+    
+    def test_location(self,roi,x,y,thresh,margin):
+	# Test the area around the starting coord for pixels below mean level
+	return (roi[y-margin:y+margin,x-margin:x+margin] < thresh).any()
+	print "Test location",test_location
+
     def find_perf_edges(self,img,coord,margin=80):
 	"""
 	Used to establish the perforation size and position
@@ -192,7 +233,7 @@ class telecinePerforation():
 	left and right edges. Assumes the edges will be darker than the
 	(x,y) point. 
 	img is single channel grayscale version of the full image 
-	but if converted first if necessary.
+	but is converted first if necessary.
 	margin is the number of pixels centred in the coord to smooth
 	If a suitable bright area is found, the attributes describing
 	the perforation are set
@@ -212,35 +253,17 @@ class telecinePerforation():
 	# Set threshold 20% of difference between mean value and upper value
 	thresh = thresh + ( (1.0 - thresh) / 5.0 )
 	# Test the area around the starting coord for pixels below mean level
-	test_location = (roi[y-margin:y+margin,x-margin:x+margin] < thresh).any()
-	print "Test location",test_location
-	if test_location:
+	if self.test_location(roi,x,y,thresh,margin):
 	    # we're too close an edge or not in the perforation at all
 	    return False
 	# Bottom segment
-	# Get a slice from y to the bottom of the roi, with width pixels left and right 
-	# Average across the width to get a 1d array and threshold it
-	# Repeat for each segment
-	thr = roi[y:,x-margin:x+margin].mean(axis=1) < thresh
-	# Position of transition to dark edge
-	m = thr.argmax() 
-	if m==0: m=len(thr) # If not found assume it's at the edge
-	b = y + m
+	b = self.find_bottom_edge(roi,x,y,thresh,margin)
 	# Top segment
-	thr = roi[:y,x-margin:x+margin].mean(axis=1) < thresh
-	m = thr[::-1].argmax() # count backwards
-	if m==0: m=y
-	t = y - m
+	t = self.find_top_edge(roi,x,y,thresh,margin)
 	# Right hand segment
-	thr = roi[y-margin:y+margin,x:].mean(axis=0) < thresh
-	m = thr.argmax()
-	if m==0: m=len(thr)
-	r = x + m
+	r = self.find_right_edge(roi,x,y,thresh,margin)
 	# Left hand segment
-	thr = roi[y-margin:y+margin,:x].mean(axis=0) < thresh
-	m = thr[::-1].argmax()
-	if m==0: m=x
-	l = x - m
+	l = self.find_left_edge(roi,x,y,thresh,margin)
 	w,h = (r-l, b-t)
 	# Check aspect ratio of perforation
 	aspect = w / float(h)

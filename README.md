@@ -1,7 +1,6 @@
-RPi Telecine Project
-====================
+# RPi Telecine Project
 
-Code and models for an 8mm film scanner project based around a Raspberry Pi model B and camera module.
+This project consists of code and models for an 8mm film scanner project based around a Raspberry Pi model B and camera module.
 Most of the code is written in Python.
 
 The project is designed to be able to reliably capture each frame of a reel of 8mm film 
@@ -23,7 +22,8 @@ Code makes use of:
 * Numpy and Scipy
 
 This is a work in progress, and hasn't yet been used on any precious films. It's a good idea to
-test using only 'disposable films'. Ebay is a good source of old 'home movies'.
+test using only 'disposable films'. Ebay is a good source of old 'home movies'. Some test transfers are 
+in the examples list below.
 
 Examples
 --------
@@ -32,3 +32,4 @@ Examples
 * London to Brighton: http://youtu.be/7-SdT0FMGkM
 * Derby Day: http://youtu.be/9bVeMD78gXc
 * Blackpool illuminations: http://youtu.be/ZH1QqgxNLk8
+* Wings of Speed: http://youtu.be/DhBY11DGUps

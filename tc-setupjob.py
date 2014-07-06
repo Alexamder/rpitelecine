@@ -50,6 +50,7 @@ s	Save current settings
 Esc	Escape without saving
 c	Toggle clipped colours
 g	Toggle grayscale
+d	Cycle through DRC settings (off,low,med,high)
 -|+	Reduce|increase shutter
 r | R	Reduce|increase red gain
 b | B	Reduce|increase blue gain
@@ -67,7 +68,8 @@ Arrows	Move crop
 PgUp	Make crop larger
 PgDn	Make crop smaller
 Home	Nudge motor forward
-End	Nudge motor backward"""
+End	Nudge motor backward
+1-4	Display reduction (1 full size, 4 quarter size)"""
 
 scale_display = 3
 
@@ -271,6 +273,8 @@ def setup_telecine():
 	while capturing:
 	    cam.cam.shutter_speed = cnf.shutter_speed
 	    cam.cam.awb_gains = cnf.awb_gains
+	    cam.cam.drc_strength = cnf.drc  # Will work after picamera 1.6
+	    cam.cam.image_effect = cnf.image_effect
 	    img = cam.take_picture()
 	    img_h,img_w = img.shape[:2]
 	    caption = ( "Shutter speed: {} gain_r:{:.3f} gain_b:{:.3f}".\
@@ -396,10 +400,25 @@ def setup_telecine():
 		cnf.awb_gains[1] -= cnf.awb_gains[1]*0.05
 	    elif key==ord('B') and cnf.awb_gains[0] < 5:
 		print('Increase blue gain')
-		cnf.awb_gains[1] += cnf.awb_gains[1]*0.05			
+		cnf.awb_gains[1] += cnf.awb_gains[1]*0.05
+	    elif key==ord('d'):
+		# Toggle through DRC setting
+		i = cnf.drc_values.index(cnf.drc)
+		i = (i+1) % len(cnf.drc_values)
+		cnf.drc = cnf.drc_values[i]
+		print('DRC: {}'.format(cnf.drc))
+	    elif key==ord('e'):
+		# Toggle through image effects
+		i = cnf.image_effect_values.index(cnf.image_effect)
+		i = (i+1) % len(cnf.image_effect_values)
+		cnf.image_effect = cnf.image_effect_values[i]
+		print('Image Effect: {}'.format(cnf.image_effect))
+	    elif key==ord('E'):
+		print('Reset Image Effect')
+		cnf.image_effect = cnf.image_effect_values[0]
 	    elif show_perf and perf_found:
 		# Allow adjustment of crop
-		adjust_crop(key,img_w,img_h)			    
+		adjust_crop(key,img_w,img_h)
     finally:
 	tc.light_off()
 	cam.close_cam()

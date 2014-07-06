@@ -1,24 +1,25 @@
-Post-production
+# Post-production
 
 These are some simple scripts and snippets of code designed to be run on a full 
 power PC, as the Raspberry Pi's ARM processor really isn't up to the job of 
-transcoding and processing the large number of images into video. My PC is 
-running OpenSUSE Linux with an i5 Processor, and some of the routines take a 
-long time as it is.
+transcoding and processing the large number of images into video. 
+
+My PC runs OpenSUSE Linux with an i5 Processor, and some of the routines take a 
+long time.
 
 There are lots of potential processing options, using Linux, OSX or Windows. 
 On Linux Openshot and Kdenlive are very good video editors.
 
-Getting the images onto the PC
-------------------------------
+## Getting the images onto the PC
 
 Copy the files to from the Pi to the PC. 50 feet of film generates about 5-6GB 
 of png files, so it's probably quicker to shut down the Pi, remove the SD card, and
 copy the files using an SD card reader on the host PC.  If time isn't an issue, or
 you want to keep the Pi running, it's possible to use scp to copy the files over.
+As the pictures are stored on the SD card which uses the Ext4 filesystem, you won't be
+able to read the card directly on a Windows system without loading additional software.
 
-Copy files using scp
---------------------
+## Copy files using scp
 
 From the PC, in a terminal:  
 
@@ -43,8 +44,7 @@ With the Pi set up wirelessly, each image takes a second or so to copy. It is qu
 from the SD card directly, if you are running Linux on the PC. Bear in
 mind you are copying about 3,500 pictures for a 50 foot reel of film.
 
-Create an MP4 film of the video using mencoder
-----------------------------------------------
+## Create an MP4 film of the video using mencoder
 
 A quick and dirty way of getting video from all the pictures is to use mencoder on
 the command line. It's part of mplayer, and should be installed when you installed that
@@ -64,8 +64,7 @@ Digital video players I have tried on the PC, media player hardware, and youtube
 seem to have trouble with the odd framerate, so it isn't necessary to interpolate frames, 
 or alter the rate unless you wish to output to a media like DVD with a fixed 25fps format.
 
-Use enfuse for combining bracketed pictures
--------------------------------------------
+# Use enfuse for combining bracketed pictures
 
 Enfuse is part of Hugin - and is a command line utility that can combine two or more
 pictures of the same scene taken with different exposures. [Details here](http://enblend.sourceforge.net/)
@@ -110,6 +109,6 @@ while files:
         subprocess.Popen( cmd, stdout=FNULL, stderr=subprocess.STDOUT )
 ```
 It very simply goes through all the frames in a sequence, and combines pairs with matching
-sequence numbers, creating a new sequence. Enfuse runs slowly, about 1 a second - but as it 
-only uses a single core on the processor, this script backgrounds 3 of every four, so in
+sequence numbers, creating a new sequence. Enfuse runs slowly, about 1 a second even on my 
+Core i5 - but as it only uses a single core on the processor, this script backgrounds 3 of every four, so in
 effect running four times faster than simply doing one at a time.

@@ -1,8 +1,6 @@
-RPi Telecine construction
-=========================
+# RPi Telecine construction
 
-Chassis
--------
+## Chassis
 
 The chassis is constructed mainly from [Makerbeam](http://www.makerbeam.eu/) 
 10mm extruded aluminium, and associated accessories. The Nema 17 stepper 
@@ -13,8 +11,7 @@ Pibow case is attached to the front beam with long steel M3 screws in place
 of the standard nylon ones. A long camera ribbon cable goes from the Pi to the
 camera.
 
-3d printed parts
-----------------
+## 3d printed parts
 
 Various parts in the telecine were 3d printed. A fair amount of precision is required for the 
 film handling. It's important that the film path is pretty level - from film-spool to motor 
@@ -41,13 +38,17 @@ as this gives a good smooth surface for gripping the film edges. First version i
 white standard nylon slipped more. The pinch rollers use bearing races so they can rotate
 freely. The film rollers fit steppers with a 5mm D shaped shaft. A little bit of electrical 
 tape was used on the shaft to make a tight fit.
+
+Pinch rollers are mounted on swinging arms, and use rubber bands made from an old bicycle 
+inner tube to hold the roller in tension with the motor mounted (capstan) roller.
+The arms can be released in order to remove the film.
+
 The light box serves to mix the colours of the white and turquoise LEDs, and to diffuse the
 light to create a flat area of illumination behind the gate.
 The gate and camera mount fit into the slots on the Makerbeam - allowing adustment while
 keeping alignment straight.
 
-Hacked servos
--------------
+## Hacked servos
 
 The film spool tables are attached directly to the splines of the servos. The servos
 are standard inexpensive TowerPro MG995s (or copies), but modded for continuous
@@ -63,3 +64,25 @@ Film spools are not fixed on the tables - they are designed to rotate freely so 
 be pulled off the reel, and the take-up spool rotates with a little bit of friction, rotating
 enough to take up the slack. The motors are designed just to rotate in one direction - in order 
 to pull the film onto the spool. 
+
+## Camera and Lens
+
+The camera is screwed onto a 3d printed bracket which fits into the slot in a short piece of Makerbeam.
+It can be fixed securely, but allows for adjustment and focusing the image. 
+To focus closer the Raspberry Pi camera's lens needs to be carefully unscrewed almost
+as far as it can. This is not enough to get an 8mm frame large enough in the frame, so an additional
+lens is required. 
+
+The first version of the camera mount allowed fixing of a simple
+(and inexpensive) smartphone close-up/macro lens. These can be got for cheap from Ebay.
+Results using this lens was just about acceptable - the centre of the frame was
+pretty sharp, but got softer away from the centre with a fair amount of colour fringing. My 
+first examples on Youtube use this lens. Not bad for a lens that costs less than a fiver.
+
+Much better is its replacement - a coated Steinheil triplet, available for a reasonable price from
+[Surplus Shed](http://www.surplusshed.com/pages/item/pl1033.html) in the USA. This lens is much sharper
+with little chromatic abberation and has less distortion than the smartphone lens. 
+It was suggested for macro use by rkinch [in this thread on the Pi forums](http://www.raspberrypi.org/forums/viewtopic.php?f=43&t=43985&start=52).
+The camera mount design was adjusted for this lens.
+
+

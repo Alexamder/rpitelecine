@@ -58,7 +58,7 @@ import picamera.array
 # for intermediate storage
 cam = picamera.PiCamera()
 
-def setup_cam(awb_gains,shutter):
+def setup_cam(awb_gains,shutter,drc='off',effect='none'):
 	""" 
 	Camera settings for telecine
 	Need fixed shutter speed, AWB etc for consistency 
@@ -70,6 +70,15 @@ def setup_cam(awb_gains,shutter):
 	cam.awb_gains=awb_gains
 	cam.awb_mode='off'
 	cam.shutter_speed=shutter
+	# Enable with Picamera 1.6
+	#if drc in cam.DRC_STRENGTHS.keys():
+	#    cam.drc_strength = drc
+	#else:
+	#    cam.drc_strength = 'off'
+	if effect in cam.IMAGE_EFFECTS:
+	    cam.image_effect = effect
+	else:
+	    cam.image_effect = 'none'
 	cam.vflip=True
 	
 def close_cam():

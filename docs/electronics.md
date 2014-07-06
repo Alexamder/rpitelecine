@@ -1,8 +1,6 @@
-RPi Telecine Electronics
-========================
+# RPi Telecine Electronics
 
-The PCB
--------
+## The PCB
 
 The PCB design is pretty simple and comprises the following sections:
 
