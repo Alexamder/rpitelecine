@@ -9,6 +9,16 @@ or dense film.
 
 Once captured, the folder of image files can be transferred to a PC for further processing.
 
+Futher information is in the docs folder in this Github repository:
+
+* [Description of the electronics](docs/electronics.md)
+* [Construction details](docs/mechanics.md)
+* [Typical workflow used to digitise films](docs/workflow.md)
+* [Hints for post production on a PC](post-production/README.md)
+* [Detailed photos available in the images folder](images/)
+
+![Overview of RPI telecine](images/overview.png)
+
 Design was somewhat inspired by the [Kinograph project](http://kinograph.cc/)
 
 3d printed Gate was inspired [by this design](http://www.mets-telecinesystem.co.uk/index.php/how-its-made/making-the-film-gate).
@@ -25,8 +35,7 @@ This is a work in progress, and hasn't yet been used on any precious films. It's
 test using only 'disposable films'. Ebay is a good source of old 'home movies'. Some test transfers are 
 in the examples list below.
 
-Examples
---------
+## Video
 
 * Overview: http://youtu.be/xm3jTsKSOtE
 * London to Brighton: http://youtu.be/7-SdT0FMGkM

@@ -21,6 +21,8 @@ cable. It might be possible to connect it directly to the Pi - but a spacer
 may be required to clear the Pi's ethernet port, and allow space for the camera 
 ribbon cable.
 
+![PCB overview](../images/annotated-pcb.png =800x)
+
 It is a pretty simple circuit - all through hole components, except for three 
 power Mosfets. It uses modules for the 5V power regulator, LED drivers, and 
 stepper motors. Power is designed to be provided by a 12V supply, rated at 3A+,
@@ -83,6 +85,10 @@ original Kinograph system - or as a timelapse controller.
 PCB was designed in Kicad, and I created modules and footprints for the 
 BigEasyDrivers, LED drivers and DC module. It was made by Smart-Prototyping, as 
 they were having  a special offer on 10x10cm boards.
+
+[Kicad project files are here](../hardware/RPI telecine circuit.zip).
+
+[Gerbers for the PCB are here](../hardware/Gerbers.zip).
 
 
 
