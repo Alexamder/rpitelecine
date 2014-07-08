@@ -42,6 +42,9 @@ voltage provided by the regulator so that it exactly outputs 5V. These modules
 can be set to output anything from 1 - 12V. Adjust the trimmer to the correct 
 voltage before connecting the Pi.
 
+![Check for 5V out of the regulator!](../images/check-buck-voltage.jpg)
+**Very Important**
+
 Using a SPI controlled 16 bit IO expander (the MCP23S17) means that everything 
 can be controlled simply using the Python bindings for 
 [WiringPi](http://pi.gadgetoid.com/article/wiringpi-version-2-with-extra-python).
@@ -80,7 +83,7 @@ Camera release is based around a pair of 4N35 optocouplers. With a 2.5mm jack it
 be used for Canon and Pentax DSLRs. Might also be suitable for other cameras. The 
 optocouplers isolate the camera circuit from the Pi. This isn't used for my current
 project, but means the PCB is versatile, so could be used with an DSLR like the 
-original Kinograph system - or as a timelapse controller.
+original Kinograph system - or allows the PCB to be used as a timelapse controller.
 
 PCB was designed in Kicad, and I created modules and footprints for the 
 BigEasyDrivers, LED drivers and DC module. It was made by Smart-Prototyping, as 
