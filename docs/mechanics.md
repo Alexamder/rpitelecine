@@ -39,7 +39,7 @@ white standard nylon slipped more. The pinch rollers use bearing races so they c
 freely. The film rollers fit steppers with a 5mm D shaped shaft. A little bit of electrical 
 tape was used on the shaft to make a tight fit.
 
-![Pinch roller detail](../images/pinch-roller-detail.jpg =400x)
+![Pinch roller detail](../images/pinch-roller-detail.jpg)
 
 Pinch rollers are mounted on swinging arms, and use rubber bands made from an old bicycle 
 inner tube to hold the roller in tension with the motor mounted (capstan) roller.
@@ -52,7 +52,7 @@ keeping alignment straight.
 
 [Original 3d models and STL files are here](../hardware/3d Models/).
 
-![Camera gate and lightbox - 3d printed](../images/cam-gate-lightbox.jpg =400x)
+![Camera gate and lightbox - 3d printed](../images/cam-gate-lightbox.jpg)
 3d printed lightbox, gate and camera/lens-mount in situ
 
 ## Hacked servos
@@ -74,7 +74,7 @@ to pull the film onto the spool.
 
 ## Camera and Lens
 
-![Camera and lens assembly](../images/cam-mount-3-4.jpg =400x)
+![Camera and lens assembly](../images/cam-mount-3-4.jpg)
 
 The camera is screwed onto a 3d printed bracket which fits into the slot in a short piece of Makerbeam.
 It can be fixed securely, but allows for adjustment and focusing the image. 

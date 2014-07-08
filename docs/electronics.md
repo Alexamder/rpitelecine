@@ -21,7 +21,7 @@ cable. It might be possible to connect it directly to the Pi - but a spacer
 may be required to clear the Pi's ethernet port, and allow space for the camera 
 ribbon cable.
 
-![PCB overview](../images/annotated-pcb.png =800x)
+![PCB overview](../images/annotated-pcb.png)
 
 It is a pretty simple circuit - all through hole components, except for three 
 power Mosfets. It uses modules for the 5V power regulator, LED drivers, and 
