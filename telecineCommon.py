@@ -60,6 +60,16 @@ class telecineConfig():
     show_gray = False
     brackets = False
     
+    # Dynamic Range Compression
+    #drc_values = sorted(cam.cam.DRC_STRENGTHS,key=cam.cam.DRC_STRENGTHS.get)
+    drc_values = ('off','low','medium','high')
+    drc = 'off'
+    # Image Effects - allow a subset of ones known to work with the perf detection
+    image_effect_values = ('none','denoise','colorbalance','saturation','washedout',
+        'blur','film',  'colorswap','sketch','oilpaint','hatch','pastel','watercolor',\
+        'posterise','colorpoint','cartoon')
+    image_effect = 'none'
+    
     perf_size = [0,0] # Perforation size - w,h
     perf_cx = 0 # Perforation centre line - cx
 
@@ -69,7 +79,7 @@ class telecineConfig():
     ave_steps_fd = 0
     ave_steps_bk = 0
     pixels_per_step = 5
-    
+
     def __init__(self):
 	pass
 	 

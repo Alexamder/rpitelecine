@@ -92,7 +92,7 @@ with picamera.PiCamera() as camera:
     camera.start_preview()
     camera.preview_fullscreen=True
     # Camera warm-up time - and allow time for WB to settle
-    time.sleep(10)
+    time.sleep(20)
     camera.capture(stream, 'jpeg')
 tc.light_off()
 
