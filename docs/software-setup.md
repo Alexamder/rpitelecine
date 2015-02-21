@@ -39,13 +39,13 @@ For the latter, the easiest way is to go into LXDE with 'startx' and click Menu-
 
 ## Update and install packages
 Python-dev and python-setuptools are used to install wiringPi2; OpenCV is used in the rpiTelecine scripts 
-to provide a rudimentary GUI and image saving capability.
+to provide a rudimentary GUI and image saving capability, and Scipy is used for some simple image analysis.
 
 ```
 $ sudo apt-get update
 $ sudo apt-get upgrade
 $ sudo apt-get install python-dev python-setuptools 
-$ sudo apt-get install libopencv-dev python-opencv
+$ sudo apt-get install libopencv-dev python-opencv python-scipy
 ```
 
 ## Install WiringPi2 and WiringPi2-Python
