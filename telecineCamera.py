@@ -53,10 +53,13 @@
 from __future__ import division
 import picamera
 import picamera.array 
+import time
+import numpy as np
+import scipy.ndimage
 
 # Use a stream for storing the captured image to save using the SD card
 # for intermediate storage
-cam = picamera.PiCamera()
+cam = picamera.PiCamera(sensor_mode=2)
 
 def setup_cam(awb_gains,shutter,drc='off',effect='none'):
 	""" 
@@ -66,15 +69,14 @@ def setup_cam(awb_gains,shutter,drc='off',effect='none'):
 	in the job tc-whitebalace.py
 	"""
 	cam.resolution = cam.MAX_IMAGE_RESOLUTION # 2592x1944
-	cam.ISO=100
+	cam.iso=100                     # Fix ISO for minimum sensor gain
+	time.sleep(2)
 	cam.awb_gains=awb_gains
-	cam.awb_mode='off'
-	cam.shutter_speed=shutter
-	# Enable with Picamera 1.6
-	#if drc in cam.DRC_STRENGTHS.keys():
-	#    cam.drc_strength = drc
-	#else:
-	#    cam.drc_strength = 'off'
+	cam.awb_mode='off'              # Fix the awb_gains
+	cam.image_denoise=False         # Switch off image denoise - speeds up capture and retains detail in image
+	cam.framerate = 15              # Maximum allowed for full frame stills/video 
+	cam.shutter_speed=shutter       # Fix shutter speed
+	cam.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
 	if effect in cam.IMAGE_EFFECTS:
 	    cam.image_effect = effect
 	else:
@@ -85,13 +87,13 @@ def close_cam():
 	cam.close()
 
 def take_picture():
-	""" 
-	Returns an openCV compatible colour image 
-	"""
-	with picamera.array.PiRGBArray(cam) as output:
-	    cam.capture(output, format='bgr')
-	    return output.array
-        
+        """ 
+        Returns an openCV compatible colour image 
+        """
+        with picamera.array.PiRGBArray(cam) as output:
+            cam.capture(output, format='bgr')
+            return output.array 
+
 def take_bracket_pictures():
 	""" 
 	Returns two images in a list

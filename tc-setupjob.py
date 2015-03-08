@@ -9,7 +9,7 @@
 # Using the opencv window does require an X server - it will
 # work, albeit very slowly, over an ssh connection
 #
-# Copyright (c) 2014, Jason Lane
+# Copyright (c) 2015, Jason Lane
 # 
 # Redistribution and use in source and binary forms, with or without modification, 
 # are permitted provided that the following conditions are met:
@@ -77,32 +77,32 @@ saving = False
 
 def get_pixels_per_step(times=5):
     # Establishes how many pixels in the image per motor step
-
+    # Takes an average
     steps = 60
     counts = []
     tc.tension_film()
     for n in range(times):
 	centre_frame()
 	img = cam.take_picture()
-	perf_found = pf.find(img)
-	centre = pf.cy
+	pf.find(img)
+	centre = pf.centre[1]
 	tc.steps_forward(steps)
 	img = cam.take_picture()
-	perf_found1 = pf.find(img)
-	if perf_found1:
-	    diff = centre - pf.cy
-	    pixels_per_step = diff/float(steps)
+	pf.find(img)
+	found1 = pf.found
+	if found1:
+	    pixels_per_step = abs(pf.yDiff)/float(steps)
 	    counts.append(pixels_per_step)
-	    centre = pf.cy
+	    centre = pf.centre[1]
 	tc.steps_back(steps*2)
 	img = cam.take_picture()
-	perf_found2 = pf.find(img)
-	if perf_found2:
-	    diff = pf.cy - centre
-	    pixels_per_step = diff/float(steps*2)
+	pf.find(img)
+	found2 = pf.found
+	if found2:
+	    pixels_per_step = (pf.yDiff)/float(steps*2)
 	    counts.append(pixels_per_step)
 	tc.steps_forward(steps)
-	if not(perf_found1 and perf_found2):
+	if not(found1 and found2):
 	    # Perforation went out of view - so reduce number of steps
 	    steps = int(steps/1.4)
     cnf.pixels_per_step = sum(counts)/len(counts)
@@ -118,21 +118,21 @@ def calibrate_transport(frames=18,d=True):
     #tc.tension_film()
     print('Calibrating ' + 'Forward' if d else 'Backward')
     print('Pixels per step:{:.3f}'.format(pixels_per_step))
-    #centre_frame()
+    centre_frame()
+    steps = 250 # Jump a minimum number of steps
     for n in range(frames):
 	print('Calibrating - frame:%d'%(n))
 	diff=500
-	steps = 250 # Jump a minimum number of steps
 	tc.steps_forward(steps) if d else tc.steps_back(steps)
 	while abs(diff)>10:
 	    # Zero in on centre point 
 	    img = cam.take_picture()
-	    perf_found = pf.find(img)
-	    if perf_found:
-		diff = pf.y_diff
+	    pf.find(img)
+	    if pf.found:
+		diff = pf.yDiff
 		s = int(round(abs(diff)/pixels_per_step))
 		if s<2: s=2
-		print('Diff: %d'%(diff))
+		print('Diff: {} s: {}'.format(diff,s))
 		if diff < -10:
 		    tc.steps_back(s)
 		    steps = steps-s if d else steps+s
@@ -147,8 +147,8 @@ def calibrate_transport(frames=18,d=True):
 		# Need to put something a bit more intelligent here 
 		# when we fail to read a perforation
 		print "perforation not found"
-		tc.steps_forward(50) if d else tc.steps_back(50)
-		steps += 50
+		tc.steps_forward(20) if d else tc.steps_back(20)
+		steps += 20
     ave_steps = int(round(sum(steps_per_frame)/float(len(steps_per_frame))))
     print('Steps per frame:')
     print(steps_per_frame)
@@ -163,35 +163,36 @@ def draw_perforation(img):
     # Draw the perforation on the image
     # Calculate various metrics of the perforation
     x, y = pf.position
-    w, h = pf.size
+    w, h = pf.expectedSize
     r, b = ( x+w , y+h )	# Right and bottom
     cnf.perf_size = (w,h)
-    cnf.perf_cx = pf.cx
+    cnf.perf_cx = pf.centre[0]
     # Draw perforation on preview
+    print pf.centre
     cv2.rectangle(img,(x,y),(r,b),(0,0,255),5)
-    cv2.circle(img,(pf.cx,pf.cy),5,(255,0,255),4) # Centre of perforation
-    cv2.line(img,(pf.cx,pf.cy),(pf.cx,pf.roi_cy),(255,0,0),4)
+    cv2.circle(img,pf.centre,5,(255,0,255),4) # Centre of perforation
+    cv2.line(img,pf.centre,(pf.centre[0],pf.ROIcentrexy[1]),(255,0,0),4)
     # Crop
     if cnf.crop_size == [0,0]:
 	# Calculate crop size from size of perforation
-	cnf.crop_size[1] = int(round(h*pf.frame_height_mult[cnf.film_type]*1.1))
+	cnf.crop_size[1] = int(round(h*pf.frameHeightMultiplier[cnf.film_type]*1.1))
 	cnf.crop_size[0] = int(round(cnf.crop_size[1] * 1.3333))
 	cnf.crop_offset[0] = cnf.perf_size[0]//4
 	if cnf.film_type == 'super8':
 	    cnf.crop_offset[1] = -(cnf.crop_size[1]//2)
 	else: # std8
 	    cnf.crop_offset[1] = -(cnf.perf_size[1]//8)
-    cnf.crop_x = pf.cx+cnf.crop_offset[0]
-    cnf.crop_y = pf.cy+cnf.crop_offset[1]
+    cnf.crop_x = pf.centre[0]+cnf.crop_offset[0]
+    cnf.crop_y = pf.centre[1]+cnf.crop_offset[1]
     cv2.rectangle(img,(cnf.crop_x,cnf.crop_y),\
 	    (cnf.crop_x+cnf.crop_size[0], cnf.crop_y+cnf.crop_size[1]),\
 		(0,255,0),4)
 
 def draw_roi(img):
     # Draws a rectangle showing the ROI area
-    if pf.ROI != None:
-	cv2.rectangle(img,(pf.ROI[1].start,pf.ROI[0].start),\
-			    (pf.ROI[1].stop,pf.ROI[0].stop),(0,255,255),3)
+    if pf.isInitialised:
+	cv2.rectangle(img,(pf.ROIslice[1].start,pf.ROIslice[0].start),\
+			    (pf.ROIslice[1].stop,pf.ROIslice[0].stop),(0,255,255),3)
 
 def play_frames(frames=18,dr=True):
     # Move forward/back by a number of frames, displaying each one
@@ -199,7 +200,7 @@ def play_frames(frames=18,dr=True):
     for n in range(frames):
 	next_frame() if dr else prev_frame()
 	img = cam.take_picture()
-	found = pf.find(img)
+	pf.find(img)
 	caption = '{}: {}'.format('Forward' if dr else 'Backward',n)
 	if cnf.show_gray:
 	    img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -213,19 +214,19 @@ def adjust_crop(key,img_w,img_h):
     steps = 10
     if(key==cv2_keys['LeftArrow']):
 	print('Crop left')
-	if (pf.cx+cnf.crop_offset[0])>steps:
+	if (pf.centre[0]+cnf.crop_offset[0])>steps:
 	    cnf.crop_offset[0] -= steps
     elif (key==cv2_keys['RightArrow']):
 	print('Crop right')
-	if (pf.cx+cnf.crop_offset[0]+cnf.crop_size[0])+steps < img_w:
+	if (pf.centre[0]+cnf.crop_offset[0]+cnf.crop_size[0])+steps < img_w:
 	    cnf.crop_offset[0] += steps
     elif (key==cv2_keys['UpArrow']):
 	print('Crop up')
-	if (pf.cy+cnf.crop_offset[1])>steps:
+	if (pf.centre[1]+cnf.crop_offset[1])>steps:
 	    cnf.crop_offset[1] -= steps
     elif (key==cv2_keys['DownArrow']):
 	print('Crop down')
-	if (pf.cy+cnf.crop_offset[1]+cnf.crop_size[1])+steps < img_h:
+	if (pf.centre[1]+cnf.crop_offset[1]+cnf.crop_size[1])+steps < img_h:
 	    cnf.crop_offset[1] += steps
     elif (key==cv2_keys['PgDn']):
 	print('Crop smaller')
@@ -234,7 +235,7 @@ def adjust_crop(key,img_w,img_h):
 	    cnf.crop_size[0] = int(round(cnf.crop_size[1] * 1.3333))
     elif (key==cv2_keys['PgUp']):
 	print('Crop larger')
-	if (pf.cy+cnf.crop_offset[1]+cnf.crop_size[1])+steps < img_h:
+	if (pf.centre[1]+cnf.crop_offset[1]+cnf.crop_size[1])+steps < img_h:
 	    cnf.crop_size[1] += steps
 	    cnf.crop_size[0] = int(round(cnf.crop_size[1] * 1.3333))
 
@@ -251,13 +252,13 @@ def setup_telecine():
 		x = x * scale_display
 		y = y * scale_display
 		img = cam.take_picture()
-		found = pf.find_perf_edges(img,(x,y))
-		if found:
+		pf.findFirstFromCoords(img,(x,y),20)
+		if pf.found:
 		    x,y = pf.position
-		    w,h = pf.size
-		    perf_found = pf.find(img)
+		    w,h = pf.expectedSize
+		    pf.found = pf.find(img)
 		    draw_perforation(img)
-		    caption = "Perforation found: {} {}".format(pf.position,pf.size)
+		    caption = "Perforation found: {} {}".format(pf.position,pf.expectedSize)
 		    print caption
 		    display_image('Telecine',img,reduction=scale_display,text=caption)
 		
@@ -279,14 +280,11 @@ def setup_telecine():
 	    img_h,img_w = img.shape[:2]
 	    caption = ( "Shutter speed: {} gain_r:{:.3f} gain_b:{:.3f}".\
 		    format(cam.cam.shutter_speed,cnf.awb_gains[0],cnf.awb_gains[1]) )
-	    if show_perf:
-		if pf.ROI == None:
-		    perf_found = False
-		else:
+	    if show_perf and pf.isInitialised:
 		    # Find perforation
-		    perf_found = pf.find(img)
-		    if perf_found:
-			print('Perforation found: {} {}'.format(pf.position,pf.size))
+		    pf.find(img)
+		    if pf.found:
+			print('Perforation found: {} {}'.format(pf.position,pf.expectedSize))
 		    else:
 			print('Perforation not found.')
 	    if cnf.show_gray:
@@ -311,10 +309,10 @@ def setup_telecine():
 		saving = True
 	    elif key==cv2_keys['Home']:
 		print("Nudge forward")
-		tc.steps_forward(40)
+		tc.steps_forward(20)
 	    elif key==cv2_keys['End']:
 		print("Nudge backward")
-		tc.steps_back(40)
+		tc.steps_back(20)
 	    elif key==ord('o'):
 		print('Centering frame')
 		centre_frame()
@@ -416,7 +414,7 @@ def setup_telecine():
 	    elif key==ord('E'):
 		print('Reset Image Effect')
 		cnf.image_effect = cnf.image_effect_values[0]
-	    elif show_perf and perf_found:
+	    elif show_perf and pf.found:
 		# Allow adjustment of crop
 		adjust_crop(key,img_w,img_h)
     finally:
@@ -446,14 +444,12 @@ if __name__ == '__main__':
     else:
 	print('Super 8 film chosen')
 	cnf.film_type = 'super8'
-    pf.set_film_type(cnf.film_type)
     if cnf.perf_size:
-	pf.set_size( cnf.perf_size )
-	pf.img_size = cam.cam.MAX_IMAGE_RESOLUTION
-	if cnf.perf_cx:
-	    pf.cx = cnf.perf_cx
-	    pf.set_roi()
-    
+        pf.init( filmType=cnf.film_type, imageSize=cam.cam.MAX_IMAGE_RESOLUTION,
+                    expectedSize=cnf.perf_size, cx=cnf.perf_cx )
+    else:
+        pf.setFilmType(cnf.film_type)
+
     if args.brackets:
 	print('Bracketing on')
     cnf.brackets = args.brackets

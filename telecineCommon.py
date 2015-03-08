@@ -226,7 +226,7 @@ def next_frame():
     # Move to next frame
     steps = cnf.ave_steps_fd
     if pf.found:
-	diff = pf.y_diff # Pixels of centre of perf to centre of ROI
+	diff = pf.yDiff # Pixels of centre of perf to centre of ROI
 	steps = steps + int(round(diff/cnf.pixels_per_step))
     print('Moving %d steps'%(steps))
     tc.steps_forward(steps)
@@ -236,7 +236,7 @@ def prev_frame():
     # Move to next frame
     steps = cnf.ave_steps_bk
     if pf.found:
-	diff = pf.y_diff # Pixels of centre of perf to centre of ROI
+	diff = pf.yDiff # Pixels of centre of perf to centre of ROI
 	steps = steps - int(round(diff/cnf.pixels_per_step))
     print('Moving %d steps'%(steps))
     tc.steps_back(steps)
@@ -250,19 +250,19 @@ def centre_frame():
     while (count > 0) and not done:
 	count -= 1
 	img = cam.take_picture()
-	perf_found = pf.find(img)
-	if perf_found:
-	    diff = pf.cy - pf.roi_cy
-	    if diff < -10:
-		tc.steps_back(int(abs(diff)/cnf.pixels_per_step))
-	    elif diff > 10:
-		tc.steps_forward(int(diff/cnf.pixels_per_step))
+	pf.find(img)
+	if pf.found:
+	    if pf.yDiff > 10:
+		tc.steps_forward(int(pf.yDiff/cnf.pixels_per_step))
+	    elif pf.yDiff < -10:
+		tc.steps_back(int(abs(pf.yDiff)/cnf.pixels_per_step))
 	    else:
 		# Pretty close to the centre
 		done = True
 	else:
-	    # No perforation found so step forward
-	    tc.steps_forward(100)
+	    # No perforation found so step forward 1/3 frame which should
+	    # get a perforation into the ROI
+	    tc.steps_forward(int(cnf.ave_steps_fd/3))
 
 def fast_wind(frames,d=True):
     # Fast wind a lot of frames

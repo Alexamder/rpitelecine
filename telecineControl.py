@@ -82,8 +82,7 @@ class tcControl():
     
     # Parameters to pulse takeup reel every so often to keep film
     # wrapped around rollers
-    take_up_steps = 550
-    take_up_counter = 0
+    take_up_steps = take_up_counter = 550
     
     # Because of slippage in system skip pushing film every so often
     # Without this, film tends to start to slacken and bunch up
@@ -123,8 +122,8 @@ class tcControl():
 	Set parameters when direction changes
 	"""
 	self.direction = d
-	self.take_up_counter = 0
-	self.step_counter = 0
+	self.take_up_counter = self.take_up_steps
+	self.step_counter = self.tension_steps
 	self.m1.set_direction(d)
 	self.m2.set_direction(d)
 
@@ -135,20 +134,21 @@ class tcControl():
 	"""
 	m1step = self.m1.step	# Speed up loop a bit by not evaluating dots
 	m2step = self.m2.step
-	for n in xrange(steps):
-	    if not self.direction:
-		self.change_direction( True )
-	    self.take_up_counter += 1
-	    if self.take_up_counter>=self.take_up_steps:
-		self.reel2.pulse()
-		self.take_up_counter=0
-	    if self.step_counter<self.tension_steps:
+        if not self.direction:
+            self.change_direction( True )
+	while steps>1:
+            steps -= 1
+	    self.take_up_counter -= 1
+            if self.take_up_counter==1:
+                self.reel2.pulse()
+                self.take_up_counter=self.take_up_steps
+	    if self.step_counter>0:
 		# Push film one step
 		m1step()
-		self.step_counter += 1
+		self.step_counter -= 1
 	    else:
 		# Skip pushing
-		self.step_counter = 0
+		self.step_counter = self.tension_steps
 	    # Pull film one step
 	    m2step()
     
@@ -158,19 +158,21 @@ class tcControl():
 	"""
 	m1step = self.m1.step	# Speed up loop a bit by not evaluating dots
 	m2step = self.m2.step
-	for n in xrange(steps):
-	    if self.direction:
-		self.change_direction( False )
-	    self.take_up_counter += 1
-	    if self.take_up_counter==self.take_up_steps:
-		self.reel1.pulse()
-		self.take_up_counter=0
-	    if self.step_counter<self.tension_steps:
+        if self.direction:
+            self.change_direction( False )
+        while steps>1:
+            steps -= 1
+	    self.take_up_counter -= 1
+	    if self.take_up_counter==0:
+                self.reel1.pulse()
+                self.take_up_counter=self.take_up_steps
+	    if self.step_counter>0:
 		m2step()
-		self.step_counter += 1
+		self.step_counter -= 1
 	    else:
-		self.step_counter = 0
+		self.step_counter = self.tension_steps
 	    m1step()	
+
 
     def tension_film(self,steps=200):
 	# Run steppers in opposite direction for a short period - Tightens up the film
@@ -216,7 +218,7 @@ class stepperMotor():
     whole step
     """
 
-    delay = 2 # Big Easy Driver requires a pulse of 1uS or longer.
+    delay = 1 # Big Easy Driver requires a pulse of 1uS or longer.
     motor_on = False
     
     rotation_steps = 3200
@@ -255,9 +257,9 @@ class stepperMotor():
 	# Big Easy Driver will step when the pin rises
 	# Should be on and off for at least 1uS 
 	digitalWrite(self.step_pin,True)
-	delayMicroseconds(self.delay)
+	#delayMicroseconds(self.delay)
 	digitalWrite(self.step_pin,False)
-	delayMicroseconds(self.delay)
+	#delayMicroseconds(self.delay)
         
     def steps(self,s):
         # Go s steps

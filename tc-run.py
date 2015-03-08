@@ -17,7 +17,7 @@
 # This script runs in command line only, so can be run in a Screen session, allowing
 # it to run autonomously.
 #
-# Copyright (c) 2014, Jason Lane
+# Copyright (c) 2015, Jason Lane
 # 
 # Redistribution and use in source and binary forms, with or without modification, 
 # are permitted provided that the following conditions are met:
@@ -70,6 +70,7 @@ frames_count = 0
 current_frame = 0
 capture_direction = 1
 capture_ext = 'png'
+fileSaveParams = []
 config = ConfigParser.SafeConfigParser()
 
 def parse_commandline():
@@ -99,6 +100,7 @@ def parse_commandline():
     if args.jpeg:
 	print('Saving as jpeg')
 	capture_ext = 'jpg'
+	fileSaveParams = [int(cv2.IMWRITE_JPEG_QUALITY), 95]
     brackets = args.brackets
     if args.brackets:
 	print('Bracketing on')
@@ -111,9 +113,9 @@ def make_crop():
     cx,cy = pf.centre
     crop_x = cx+cnf.crop_offset[0]
     crop_y = cy+cnf.crop_offset[1]
-    return pf.crop_slice( (crop_x, crop_y, cnf.crop_size[0],cnf.crop_size[1]) )
+    return pf.cropToSlice( (crop_x, crop_y, cnf.crop_size[0],cnf.crop_size[1]) )
 
-q = Queue.Queue(5)
+q = Queue.Queue(10)
 job_finished = False
 still_writing = True
 
@@ -122,15 +124,16 @@ def writer():
     # to taking the pictures.
     global q, job_finished, still_writing
     write_time = Stopwatch()
+    #writeParams = (int(cv2.IMWRITE_PNG_COMPRESSION),7)
     while not job_finished:
 	still_writing = True
 	while not q.empty():
-	    write_time.start()
 	    fn,img = q.get()
-	    try:
-		cv2.imwrite(fn,img)
-		t=write_time.stop()
-		print('Written {} in {:.02f} secs'.format(fn,t))
+	    write_time.start()
+	    cv2.imwrite(fn,img, fileSaveParams)
+            try:
+                t=write_time.stop()
+                print('Written {} in {:.02f} secs'.format(fn,t))
 	    except:
 		t=write_time.stop()
 		print('Failed to write {} in {:.02f} secs'.format(fn,t))
@@ -155,7 +158,8 @@ def single_picture(current_frame):
     if cnf.show_gray:
 	img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     #print('Img Shape: {}'.format(img.shape))
-    found = pf.find(img)
+    pf.find(img)
+    found = pf.found
     if not found:
 	# Not found a perforation - but save full frame anyway
 	# So we can manually crop it later - if we have a previous
@@ -167,7 +171,7 @@ def single_picture(current_frame):
 	failedname = 'failed-' + fname
 	failedname = os.path.join( fpath, failedname )
 	q.put( (failedname,img) )
-	if pf.prev_position != (0,0):
+	if pf.position != (0,0):
 	    # Use last successful crop as a basis 
 	    found = True
     else:
@@ -194,7 +198,8 @@ def bracket_pictures(current_frame):
     if cnf.show_gray:
 	imgs[0] = cv2.cvtColor(imgs[0],cv2.COLOR_BGR2GRAY)
 	imgs[1] = cv2.cvtColor(imgs[1],cv2.COLOR_BGR2GRAY)
-    found = pf.find(imgs[0])
+    pf.find(imgs[0])
+    found = pf.found
     if not found:
 	# Not found a perforation - but save full frame anyway
 	# So we can manually crop it later - if we have a previous
@@ -206,7 +211,7 @@ def bracket_pictures(current_frame):
 			os.path.join( fpath, ('failed-' + fnames[1]) ) ]
 	q.put( (failednames[0],imgs[0]) )
 	q.put( (failednames[1],imgs[1]) )
-	if pf.prev_position != (0,0):
+	if pf.position != (0,0):
 	    # Use last successful crop as a basis 
 	    found = True
     else:
@@ -234,7 +239,7 @@ def run_job():
     job_finished = False
     t = threading.Thread(target=writer)
     t.start()
-    print('Film type: {}'.format(pf.film_type))
+    print('Film type: {}'.format(pf.filmType))
     try:
 	tc.light_on()
 	cam.setup_cam(cnf.awb_gains, cnf.shutter_speed, cnf.drc, cnf.image_effect)
@@ -253,9 +258,9 @@ def run_job():
 		print('Maximum failed perforation detections')
 		break
 	    if not reverse:
-		next_frame()
+	    	next_frame()
 	    else:
-		prev_frame()
+	    	prev_frame()
 	    t = frame_time.stop()
 	    print('Frame {} in {:.2f} secs'.format(current_frame, t))
 	    frame_times.append(t)
@@ -287,19 +292,17 @@ if __name__ == '__main__':
     parse_commandline()
     cnf.read_configfile(job_name)
     brackets = brackets or cnf.brackets
-    pf.set_film_type(cnf.film_type)
-    pf.set_size( cnf.perf_size )
-    pf.cx = cnf.perf_cx
-    pf.img_size = cam.cam.MAX_IMAGE_RESOLUTION
+    pf.init( filmType=cnf.film_type, imageSize=cam.cam.MAX_IMAGE_RESOLUTION,
+                    expectedSize=cnf.perf_size, cx=cnf.perf_cx )
     try:
-	pf.set_roi()
+	pf.setROI()
     except:
 	print "Cannot set ROI - run setup and select a perforation"
 	quit()
 
     print('Job:%s  %d-%d : %d frames'%(job_name,start_frame,end_frame,frames_count))
     print('Shutter speed: %d gain_r:%.3f gain_b:%.3f'%(cnf.shutter_speed,cnf.awb_gains[0],cnf.awb_gains[1]) )
-    print('cx:{} Perf size:{}'.format(pf.cx,pf.size)) 
+    print('cx:{} Perf size:{}'.format(pf.centre[0],pf.expectedSize)) 
     print('Crop: %d:%d %dx%d'%(cnf.crop_offset[0],cnf.crop_offset[1],cnf.crop_size[0],cnf.crop_size[1]))
     if capture_direction > 0:
 	print('Counting Forwards')
