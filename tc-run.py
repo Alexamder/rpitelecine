@@ -128,10 +128,10 @@ def writer():
     while not job_finished:
 	still_writing = True
 	while not q.empty():
-	    fn,img = q.get()
 	    write_time.start()
-	    cv2.imwrite(fn,img, fileSaveParams)
-            try:
+            fn,img = q.get()
+	    try:
+                cv2.imwrite(fn,img, fileSaveParams)
                 t=write_time.stop()
                 print('Written {} in {:.02f} secs'.format(fn,t))
 	    except:
