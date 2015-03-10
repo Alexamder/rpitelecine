@@ -14,15 +14,11 @@
 # Uses array API of Picamera 1.5+ to return a Numpy array
 #
 # As of May 2014, it seems to be necessary to set the memory split
-# in raspi-config to be 192M, otherwise we seem to get MMAL 
+# in raspi-config to at least 192M, otherwise we seem to get MMAL 
 # out-of-memory errors.
-#
 # 
-#	
-# close_cam() should be called at the end of the program otherwise
-# it could result in memory leaks in the GPU 
 # 
-# Copyright (c) 2014, Jason Lane
+# Copyright (c) 2015, Jason Lane
 # 
 # Redistribution and use in source and binary forms, with or without modification, 
 # are permitted provided that the following conditions are met:
@@ -52,64 +48,62 @@
 
 from __future__ import division
 import picamera
+from picamera import PiCamera
 import picamera.array 
 import time
-import numpy as np
-import scipy.ndimage
 
-# Use a stream for storing the captured image to save using the SD card
-# for intermediate storage
-cam = picamera.PiCamera(sensor_mode=2)
+# Subclass of PiCamera
 
-def setup_cam(awb_gains,shutter,drc='off',effect='none'):
-	""" 
-	Camera settings for telecine
-	Need fixed shutter speed, AWB etc for consistency 
-	between frames. The awb_gains and shutter speed are established
-	in the job tc-whitebalace.py
-	"""
-	cam.resolution = cam.MAX_IMAGE_RESOLUTION # 2592x1944
-	cam.iso=100                     # Fix ISO for minimum sensor gain
-	time.sleep(2)
-	cam.awb_gains=awb_gains
-	cam.awb_mode='off'              # Fix the awb_gains
-	cam.image_denoise=False         # Switch off image denoise - speeds up capture and retains detail in image
-	cam.framerate = 15              # Maximum allowed for full frame stills/video 
-	cam.shutter_speed=shutter       # Fix shutter speed
-	cam.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
-	if effect in cam.IMAGE_EFFECTS:
-	    cam.image_effect = effect
-	else:
-	    cam.image_effect = 'none'
-	cam.vflip=True
+class TelecineCamera( PiCamera ):
+    
+    def __init__(self):
+        super(TelecineCamera, self).__init__(sensor_mode=2)
+        # Fixed settings
+        self.resolution = self.MAX_IMAGE_RESOLUTION # 2592x1944
+        self.framerate = 15              # Maximum allowed for full frame stills/preview/video 
+        self.iso=100                     # Fix ISO for minimum sensor gain
+        self.image_denoise=False         # Switch off image denoise - speeds up capture and retains detail in image
+ 
+    def setup_cam(self,awb_gains,shutter,drc='off',effect='none'):
+        """ 
+        Settings that can be changed when setting up the job
+        Need fixed shutter speed, AWB etc for consistency between frames.
+        """
+        #time.sleep(0.5)
+        self.awb_gains=awb_gains
+        self.awb_mode='off'              # Fix the awb_gains
+        self.shutter_speed=shutter       # Fix shutter speed
+        self.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
+        if effect in self.IMAGE_EFFECTS:
+            self.image_effect = effect
+        else:
+            self.image_effect = 'none'
+        self.vflip=True
 	
-def close_cam():
-	cam.close()
-
-def take_picture():
+    def take_picture(self):
         """ 
         Returns an openCV compatible colour image 
         """
-        with picamera.array.PiRGBArray(cam) as output:
-            cam.capture(output, format='bgr')
+        with picamera.array.PiRGBArray(self) as output:
+            self.capture(output, format='bgr')
             return output.array 
 
-def take_bracket_pictures():
+    def take_bracket_pictures(self):
 	""" 
 	Returns two images in a list
 	One with normal exposure, and one with 2 stop longer exposure 
 	The aim to to get detail out of shadows/underexposed film
 	Resulting images can be combined on a PC with Hugin's enfuse utility
 	"""
-	old_shutter = cam.shutter_speed
+	old_shutter = self.shutter_speed
 	imgs = []
-	with picamera.array.PiRGBArray(cam) as output:
-	    cam.capture(output, format='bgr')
+	with picamera.array.PiRGBArray(self) as output:
+	    self.capture(output, format='bgr')
 	    imgs.append( output.array )
-	    cam.shutter_speed = old_shutter*4
+	    self.shutter_speed = old_shutter*4
 	    output.truncate(0)
-	    cam.capture(output, format='bgr')
+	    self.capture(output, format='bgr')
 	    imgs.append( output.array )
-	cam.shutter_speed = old_shutter
+	self.shutter_speed = old_shutter
 	return imgs
 	

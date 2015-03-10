@@ -39,11 +39,9 @@
 from __future__ import division
 
 import argparse
-import time
 import cv2
-import numpy as np
 
-from telecineCommon import *
+from tc_common import *
 
 help_text = """Keys:
 s	Save current settings
@@ -272,14 +270,14 @@ def setup_telecine():
 	show_perf = True
 	col_clip = 0
 	while capturing:
-	    cam.cam.shutter_speed = cnf.shutter_speed
-	    cam.cam.awb_gains = cnf.awb_gains
-	    cam.cam.drc_strength = cnf.drc  # Will work after picamera 1.6
-	    cam.cam.image_effect = cnf.image_effect
+	    cam.shutter_speed = cnf.shutter_speed
+	    cam.awb_gains = cnf.awb_gains
+	    cam.drc_strength = cnf.drc  # Will work after picamera 1.6
+	    cam.image_effect = cnf.image_effect
 	    img = cam.take_picture()
 	    img_h,img_w = img.shape[:2]
 	    caption = ( "Shutter speed: {} gain_r:{:.3f} gain_b:{:.3f}".\
-		    format(cam.cam.shutter_speed,cnf.awb_gains[0],cnf.awb_gains[1]) )
+		    format(cam.shutter_speed,cnf.awb_gains[0],cnf.awb_gains[1]) )
 	    if show_perf and pf.isInitialised:
 		    # Find perforation
 		    pf.find(img)
@@ -419,7 +417,7 @@ def setup_telecine():
 		adjust_crop(key,img_w,img_h)
     finally:
 	tc.light_off()
-	cam.close_cam()
+	cam.close()
 	cv2.destroyAllWindows
 
 if __name__ == '__main__':
@@ -445,7 +443,7 @@ if __name__ == '__main__':
 	print('Super 8 film chosen')
 	cnf.film_type = 'super8'
     if cnf.perf_size:
-        pf.init( filmType=cnf.film_type, imageSize=cam.cam.MAX_IMAGE_RESOLUTION,
+        pf.init( filmType=cnf.film_type, imageSize=cam.MAX_IMAGE_RESOLUTION,
                     expectedSize=cnf.perf_size, cx=cnf.perf_cx )
     else:
         pf.setFilmType(cnf.film_type)

@@ -50,7 +50,7 @@ import time
 import ConfigParser
 import picamera
 
-import telecineControl
+import rpiTelecine
 
 def get_awb_shutter( f ):
     """ 
@@ -74,7 +74,7 @@ def get_awb_shutter( f ):
 
 configname = os.path.expanduser('~/.telecine.ini')
 
-tc =  telecineControl.tcControl()
+tc =  rpiTelecine.tcControl()
 tc.light_on()
 
 print('Warming up lamp...')

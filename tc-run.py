@@ -47,21 +47,15 @@
 
 from __future__ import division
 
-import subprocess
 import argparse
 import os
-import ConfigParser
 import time
 import threading
 import Queue
 import cv2
 import numpy as np
 
-from telecineCommon import *
-
-import telecineControl
-import telecineCamera as cam
-import telecinePerforation
+from tc_common import *
 
 job_name = ''
 start_frame = 0
@@ -71,7 +65,6 @@ current_frame = 0
 capture_direction = 1
 capture_ext = 'png'
 fileSaveParams = []
-config = ConfigParser.SafeConfigParser()
 
 def parse_commandline():
     # Command line arguments
@@ -266,7 +259,7 @@ def run_job():
 	    frame_times.append(t)
     finally:
 	tc.light_off()
-	cam.close_cam()
+	cam.close()
 	job_finished = True	# Signals the writing thread to finish
 	while still_writing:
 	    # Wait until writing queue is empty
@@ -289,10 +282,11 @@ def run_job():
     
   
 if __name__ == '__main__':
+    
     parse_commandline()
     cnf.read_configfile(job_name)
     brackets = brackets or cnf.brackets
-    pf.init( filmType=cnf.film_type, imageSize=cam.cam.MAX_IMAGE_RESOLUTION,
+    pf.init( filmType=cnf.film_type, imageSize=cam.MAX_IMAGE_RESOLUTION,
                     expectedSize=cnf.perf_size, cx=cnf.perf_cx )
     try:
 	pf.setROI()

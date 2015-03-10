@@ -4,11 +4,9 @@
 # Runs the rewind motor for 150 seconds. Enough for a 50ft reel
 # Just helps rewind the film.
 
-
 import time
-import telecineControl
-
 import argparse
+import rpiTelecine
 
 parser = argparse.ArgumentParser(description='Rewind or wind the film. Only the reel motors are activated.')
 parser.add_argument('-s','--seconds', action="store", default='20', dest='seconds', type=int, help='Seconds to wind. Default 20')
@@ -16,10 +14,8 @@ parser.add_argument('-f','--forwards', action="store_const", const=True, default
 
 args = parser.parse_args()
 
-
-tc =  telecineControl.tcControl()
+tc =  rpiTelecine.tcControl()
 tc.light_off()
-
 
 try:
     if args.forwards:

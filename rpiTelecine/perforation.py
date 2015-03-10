@@ -51,15 +51,6 @@ import scipy.ndimage.measurements as nd
 # Types of film 
 filmTypes = ['super8', 'std8']
 
-# Utility routines
-def rgb2gray(rgb):
-    # Return grayscale version of the image
-    return np.dot(rgb[...,:3], [0.299, 0.587, 0.144]).astype(np.uint8)
-
-def bgr2gray(bgr):
-    # Return grayscale version of the image - bgr like OpenCV
-    return np.dot(rgb[...,:3], [0.144, 0.587, 0.299]).astype(np.uint8)
-
 class telecinePerforation():
     """
     Class that handles the perforation finding
@@ -114,6 +105,16 @@ class telecinePerforation():
     frameHeightMultiplier = { 'super8':4.23/1.143, 'std8':3.81/1.23 }
     frameWidthMultiplier = { 'super8':5.46/0.91, 'std8':4.5/1.8 }
 
+    useBGR = True # Use OpenCV BGR images for grey conversion
+
+    # Utility routines
+    def convert2grey(img):
+        # Return grayscale version of the image
+        if self.useBGR:
+            return np.dot(img[...,:3], [0.144, 0.587, 0.299]).astype(np.uint8)
+        else:
+            return np.dot(img[...,:3], [0.299, 0.587, 0.144]).astype(np.uint8)
+
     def init(self, filmType, imageSize, expectedSize, cx):
         # cx is the perforation film line
         # size is a (w,h) tuple of a perforation size
@@ -158,7 +159,7 @@ class telecinePerforation():
             # Already know expected size, so use smaller ROI
             # ROI height and position on Y axis
             # Top of ROI for initialised perforation detection
-            h = int(img_h/2)  # Use 1/3 of image height for ROI
+            h = int(img_h/2)  # Use 1/2 of image height for ROI
             if self.filmType == 'super8':
                 # Middle of image height
                 y = int(img_h/4)
@@ -194,7 +195,7 @@ class telecinePerforation():
                     self.ROIimg = i[:,:,1]
                 else:
                     # do 'proper' greyscale conversion
-                    self.ROIimg = rgb2gray(img[self.ROIslice])
+                    self.ROIimg = self.convert2grey(img[self.ROIslice])
             else:
                 # greyscale image already
                 self.ROIimg = img[self.ROIslice]
