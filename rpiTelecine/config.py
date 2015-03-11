@@ -37,7 +37,7 @@ import ConfigParser
 
 
 
-class telecineConfig():
+class TelecineConfig():
     
     config = ConfigParser.SafeConfigParser()
     film_type = 'super8'

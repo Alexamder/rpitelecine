@@ -30,7 +30,7 @@
 
 # Configuration handling
 from rpiTelecine.config import (
-    telecineConfig,
+    TelecineConfig,
     )
 
 from rpiTelecine.camera import (
@@ -38,11 +38,11 @@ from rpiTelecine.camera import (
     )
 
 from rpiTelecine.control import (
-    tcControl,
+    TelecineControl,
     )
 
 from rpiTelecine.perforation import (
-    telecinePerforation,
+    TelecinePerforation,
     filmTypes,
     )
 

@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
+ <author>J Lane</author>
  <class>TelecinePreview</class>
  <widget class="QMainWindow" name="TelecinePreview">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>860</width>
-    <height>672</height>
+    <width>897</width>
+    <height>660</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -49,7 +50,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>568</width>
+               <width>577</width>
                <height>461</height>
               </rect>
              </property>
@@ -134,6 +135,28 @@
                </size>
               </property>
              </spacer>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinFrameNum">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="buttonSymbols">
+               <enum>QAbstractSpinBox::NoButtons</enum>
+              </property>
+              <property name="prefix">
+               <string>Frame: </string>
+              </property>
+              <property name="maximum">
+               <number>99999</number>
+              </property>
+              <property name="value">
+               <number>99999</number>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QToolButton" name="btnBackLong">
@@ -305,16 +328,22 @@
            </property>
            <item>
             <widget class="QToolBox" name="toolBox">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>215</width>
-               <height>364</height>
+               <width>256</width>
+               <height>300</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>256</width>
-               <height>390</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="frameShape">
@@ -328,8 +357,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>246</width>
-                <height>205</height>
+                <width>240</width>
+                <height>229</height>
                </rect>
               </property>
               <attribute name="label">
@@ -341,55 +370,150 @@
                  <property name="text">
                   <string>Job name</string>
                  </property>
-                 <property name="buddy">
-                  <cstring>editJob</cstring>
-                 </property>
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="editJob"/>
-               </item>
-               <item>
-                <widget class="QLabel" name="lblOutputFolder">
-                 <property name="text">
-                  <string>Output folder</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <layout class="QHBoxLayout" name="horizontalLayout_7">
                  <item>
-                  <widget class="QLineEdit" name="editOutputFolder"/>
+                  <widget class="QLabel" name="lblJobName">
+                   <property name="frameShape">
+                    <enum>QFrame::StyledPanel</enum>
+                   </property>
+                   <property name="frameShadow">
+                    <enum>QFrame::Sunken</enum>
+                   </property>
+                   <property name="text">
+                    <string>Job Name</string>
+                   </property>
+                  </widget>
                  </item>
                  <item>
-                  <widget class="QToolButton" name="btnChooseFolder">
+                  <widget class="QPushButton" name="btnChangeJobName">
+                   <property name="maximumSize">
+                    <size>
+                     <width>80</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
                    <property name="text">
-                    <string>...</string>
+                    <string>Change...</string>
                    </property>
                   </widget>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="QLabel" name="lblFilmTypeHeading">
+                <widget class="QLabel" name="lblOutputDir">
                  <property name="text">
-                  <string>Film Type</string>
+                  <string>Projects directory</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QLabel" name="lblFilmType">
+                <layout class="QHBoxLayout" name="horizontalLayout_5">
+                 <item>
+                  <widget class="QLabel" name="lblProjectDir">
+                   <property name="frameShape">
+                    <enum>QFrame::StyledPanel</enum>
+                   </property>
+                   <property name="frameShadow">
+                    <enum>QFrame::Sunken</enum>
+                   </property>
+                   <property name="text">
+                    <string>project dir</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnChooseDir">
+                   <property name="maximumSize">
+                    <size>
+                     <width>80</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Change...</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_3">
+                 <property name="text">
+                  <string>Job outputs to</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="lblJobDir">
                  <property name="font">
                   <font>
-                   <pointsize>12</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
                   </font>
                  </property>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Sunken</enum>
+                 </property>
                  <property name="text">
-                  <string>Super 8</string>
+                  <string>Job directory</string>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_8">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_6">
+                 <item>
+                  <widget class="QLabel" name="lblFilmTypeHeading">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>65</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Film Type</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="lblFilmType">
+                   <property name="font">
+                    <font>
+                     <pointsize>12</pointsize>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Super 8</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
                <item>
                 <spacer name="verticalSpacer_3">
@@ -418,8 +542,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>246</width>
-                <height>198</height>
+                <width>256</width>
+                <height>174</height>
                </rect>
               </property>
               <attribute name="label">
@@ -508,8 +632,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>246</width>
-                <height>198</height>
+                <width>256</width>
+                <height>136</height>
                </rect>
               </property>
               <attribute name="label">
@@ -602,8 +726,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>246</width>
-                <height>198</height>
+                <width>256</width>
+                <height>210</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -731,8 +855,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>246</width>
-                <height>224</height>
+                <width>256</width>
+                <height>234</height>
                </rect>
               </property>
               <attribute name="label">
@@ -971,8 +1095,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>246</width>
-                <height>201</height>
+                <width>256</width>
+                <height>215</height>
                </rect>
               </property>
               <attribute name="label">
@@ -1429,8 +1553,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>860</width>
-     <height>20</height>
+     <width>897</width>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -1471,9 +1595,7 @@
   <tabstop>btnFwdsLong</tabstop>
   <tabstop>btnNudgeU</tabstop>
   <tabstop>btnNudgeD</tabstop>
-  <tabstop>editJob</tabstop>
-  <tabstop>editOutputFolder</tabstop>
-  <tabstop>btnChooseFolder</tabstop>
+  <tabstop>btnChooseDir</tabstop>
   <tabstop>btnChangeFilm</tabstop>
   <tabstop>btnDetectPerf</tabstop>
   <tabstop>radioTopEdge</tabstop>

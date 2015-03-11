@@ -59,7 +59,7 @@
 from __future__ import division
 from wiringpi2 import *
 
-class tcControl():
+class TelecineControl():
     
     pin_base=100
     m1_en_pin = pin_base+0

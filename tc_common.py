@@ -39,9 +39,9 @@ import cv2
 import rpiTelecine
 
 cam = rpiTelecine.TelecineCamera()
-cnf = rpiTelecine.telecineConfig()
-pf  = rpiTelecine.telecinePerforation()
-tc  = rpiTelecine.tcControl()
+cnf = rpiTelecine.TelecineConfig()
+pf  = rpiTelecine.TelecinePerforation()
+tc  = rpiTelecine.TelecineControl()
 	
 # Some useful values returned by cv2.waitKey - 
 # probably platform dependent

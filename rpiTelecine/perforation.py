@@ -51,7 +51,7 @@ import scipy.ndimage.measurements as nd
 # Types of film 
 filmTypes = ['super8', 'std8']
 
-class telecinePerforation():
+class TelecinePerforation():
     """
     Class that handles the perforation finding
     """
