@@ -425,7 +425,7 @@
            <x>0</x>
            <y>0</y>
            <width>260</width>
-           <height>281</height>
+           <height>280</height>
           </rect>
          </property>
          <property name="maximumSize">
@@ -615,8 +615,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>260</width>
-           <height>177</height>
+           <width>250</width>
+           <height>174</height>
           </rect>
          </property>
          <attribute name="label">
@@ -752,13 +752,13 @@
              <number>100</number>
             </property>
             <property name="maximum">
-             <number>9999</number>
+             <number>99999</number>
             </property>
             <property name="singleStep">
              <number>25</number>
             </property>
             <property name="value">
-             <number>1500</number>
+             <number>2500</number>
             </property>
            </widget>
           </item>
@@ -808,8 +808,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>260</width>
-           <height>220</height>
+           <width>177</width>
+           <height>170</height>
           </rect>
          </property>
          <property name="sizePolicy">
@@ -937,8 +937,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>260</width>
-           <height>258</height>
+           <width>182</width>
+           <height>214</height>
           </rect>
          </property>
          <attribute name="label">

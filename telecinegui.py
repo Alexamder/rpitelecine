@@ -43,7 +43,7 @@ class ControlMainWindow(QtGui.QMainWindow):
         self.ui.setupUi(self)
         # Job setup tab
         self.setupJob = guiSetupJob.SetupJob(camera,tc,pf,parent=self)
-        self.ui.tabs.insertTab(self._setupTab,self.setupJob,'Job setup')
+        self.ui.tabs.insertTab(self._setupTab,self.setupJob,'&Job setup')
 
         self.setupJob.jobNameChanged.connect(self.readJobSettings)
 
@@ -51,7 +51,7 @@ class ControlMainWindow(QtGui.QMainWindow):
 
         # Live preview tab
         self.livePreview = guiPreview.LivePreview(camera, parent=self)
-        self.ui.tabs.insertTab(self._previewTab,self.livePreview,'Live Preview')
+        self.ui.tabs.insertTab(self._previewTab,self.livePreview,'Live &Preview')
 
         # Preview tab
         self.ui.tabs.currentChanged.connect( self.changeTab )

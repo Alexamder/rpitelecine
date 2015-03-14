@@ -45,7 +45,7 @@ def makeHistImage(img):
         pts = np.int32(np.column_stack((bins*4,hist)))
         cv2.polylines(h,[pts],False,col)
     return np.flipud(h)
-    
+
 def makeHistGreyImage(img, ch=None):
     h = np.zeros((200,256,3),dtype=np.uint8)
     h.fill(255)
@@ -83,71 +83,6 @@ class ClickableLabel(QtGui.QLabel):
  
     def mouseReleaseEvent(self, ev):
         self.clicked.emit(ev.pos())
-    
+
     def mouseDoubleClickEvent(self, ev):
         self.doubleClicked.emit(ev.pos())
-
-class ImageViewer(QtGui.QScrollArea):
-    
-    minScale = 0.1
-    maxScale = 3.0
-    fitContents = True
-    scaleFactor = 1.0
-
-    def __init__(self,parent=None):
-        super(ImageViewer, self).__init__(parent)
-        self.imageLabel = ClickableLabel()
-        self.imageLabel.setBackgroundRole(QtGui.QPalette.Base)
-        self.imageLabel.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
-        self.imageLabel.setScaledContents(True)
-        self.setBackgroundRole(QtGui.QPalette.Dark)
-        self.setWidget(self.imageLabel)
-        self.setAlignment(QtCore.Qt.AlignCenter)
-        self.imageLabel.doubleClicked.connect(self.clickedOnImage)
-        #self.imageLabel.clicked.connect(self.clickedOnImage)
-        
-    def clickedOnImage(self,pos):
-        print "CLICKED!"
-        print "On label {} scale {} on image{}".format(pos,self.scaleFactor,pos/self.scaleFactor)
-        
-
-    def setImage(self,qimage):
-        #self.qimage = qimage # keep reference to qimage around
-        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(qimage))
-
-    def zoomIn(self):
-        self.scaleImage(1.25)
-
-    def zoomOut(self):
-        self.scaleImage(0.8)
-
-    def normalSize(self):
-        self.imageLabel.adjustSize()
-        self.scaleFactor = 1.0
-
-    def fitToWindow(self):
-        self.imageLabel.adjustSize()
-        wfactor = float( self.width()) / self.imageLabel.pixmap().width()
-        hfactor = float( self.height() ) / self.imageLabel.pixmap().height()
-        print ("fitToWindow w x h: {} x {}".format( self.width(),self.height() ))
-        if wfactor > hfactor:
-            newfactor = hfactor
-        else:
-            newfactor = wfactor
-        factor = newfactor / self.scaleFactor * 0.98
-        self.scaleImage(factor)
-
-    def scaleImage(self, factor):
-        self.scaleFactor = self.scaleFactor*factor
-        self.scaleFactor = max(self.scaleFactor,self.minScale)
-        self.scaleFactor = min(self.scaleFactor,self.maxScale)
-        print("Scale factor: {}".format(self.scaleFactor))
-        self.imageLabel.resize(self.scaleFactor * self.imageLabel.pixmap().size())
-        self.adjustScrollBar(self.horizontalScrollBar(), factor)
-        self.adjustScrollBar(self.verticalScrollBar(), factor)
-
-    def adjustScrollBar(self, scrollBar, factor):
-        scrollBar.setValue(int(factor * scrollBar.value()
-                                + ((factor - 1) * scrollBar.pageStep()/2)))
-        
-    

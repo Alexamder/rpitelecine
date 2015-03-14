@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'telecineui.ui'
 #
-# Created: Fri Mar 13 23:41:42 2015
+# Created: Sat Mar 14 09:07:39 2015
 #      by: pyside-uic 0.2.13 running on PySide 1.1.1
 #
 # WARNING! All changes made in this file will be lost!

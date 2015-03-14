@@ -70,8 +70,8 @@ class TelecineCamera( PiCamera ):
         Settings that can be changed when setting up the job
         Need fixed shutter speed, AWB etc for consistency between frames.
         """
-        self.awb_gains=awb_gains
         self.awb_mode='off'              # Fix the awb_gains
+        self.awb_gains=awb_gains
         self.shutter_speed=int(shutter)  # Fix shutter speed
         self.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
         self.vflip=True

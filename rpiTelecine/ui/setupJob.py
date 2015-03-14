@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'setupJob.ui'
 #
-# Created: Fri Mar 13 23:41:42 2015
+# Created: Sat Mar 14 09:07:40 2015
 #      by: pyside-uic 0.2.13 running on PySide 1.1.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -157,7 +157,7 @@ class Ui_SetupJobForm(object):
         self.toolBox.setFrameShape(QtGui.QFrame.NoFrame)
         self.toolBox.setObjectName("toolBox")
         self.toolJob = QtGui.QWidget()
-        self.toolJob.setGeometry(QtCore.QRect(0, 0, 260, 281))
+        self.toolJob.setGeometry(QtCore.QRect(0, 0, 260, 280))
         self.toolJob.setMaximumSize(QtCore.QSize(260, 16777215))
         self.toolJob.setObjectName("toolJob")
         self.verticalLayout_5 = QtGui.QVBoxLayout(self.toolJob)
@@ -233,7 +233,7 @@ class Ui_SetupJobForm(object):
         self.verticalLayout_5.addWidget(self.btnChangeFilm)
         self.toolBox.addItem(self.toolJob, "")
         self.toolPerforation = QtGui.QWidget()
-        self.toolPerforation.setGeometry(QtCore.QRect(0, 0, 260, 177))
+        self.toolPerforation.setGeometry(QtCore.QRect(0, 0, 250, 174))
         self.toolPerforation.setObjectName("toolPerforation")
         self.verticalLayout_7 = QtGui.QVBoxLayout(self.toolPerforation)
         self.verticalLayout_7.setObjectName("verticalLayout_7")
@@ -289,9 +289,9 @@ class Ui_SetupJobForm(object):
         self.gridLayout_2.addWidget(self.lblGainB, 2, 0, 1, 1)
         self.spinShutter = QtGui.QSpinBox(self.toolExposure)
         self.spinShutter.setMinimum(100)
-        self.spinShutter.setMaximum(9999)
+        self.spinShutter.setMaximum(99999)
         self.spinShutter.setSingleStep(25)
-        self.spinShutter.setProperty("value", 1500)
+        self.spinShutter.setProperty("value", 2500)
         self.spinShutter.setObjectName("spinShutter")
         self.gridLayout_2.addWidget(self.spinShutter, 0, 1, 1, 1)
         self.spinGainB = QtGui.QDoubleSpinBox(self.toolExposure)
@@ -309,7 +309,7 @@ class Ui_SetupJobForm(object):
         self.gridLayout_2.addItem(spacerItem3, 3, 0, 1, 1)
         self.toolBox.addItem(self.toolExposure, "")
         self.toolTransport = QtGui.QWidget()
-        self.toolTransport.setGeometry(QtCore.QRect(0, 0, 260, 220))
+        self.toolTransport.setGeometry(QtCore.QRect(0, 0, 177, 170))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -363,7 +363,7 @@ class Ui_SetupJobForm(object):
         self.gridLayout_3.addWidget(self.spinLongJump, 5, 1, 1, 1)
         self.toolBox.addItem(self.toolTransport, "")
         self.toolCrop = QtGui.QWidget()
-        self.toolCrop.setGeometry(QtCore.QRect(0, 0, 260, 258))
+        self.toolCrop.setGeometry(QtCore.QRect(0, 0, 182, 214))
         self.toolCrop.setObjectName("toolCrop")
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.toolCrop)
         self.verticalLayout_2.setObjectName("verticalLayout_2")

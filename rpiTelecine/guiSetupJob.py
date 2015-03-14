@@ -54,7 +54,7 @@ class CameraPreviewUpdater(QtCore.QThread):
     exiting = False
     ready = False
     active = True
-    
+
     def __init__(self,camera,parent = None):
         super(CameraPreviewUpdater, self).__init__(parent)
         self.camera=camera
@@ -101,6 +101,8 @@ class SetupJob( QtGui.QWidget ):
     jobNameChanged = QtCore.Signal(str) # Emits a change of job name
     outputDirectoryChanged = QtCore.Signal(str) # Emits new output dir name
 
+    scaleFactor = 1.15
+
     def __init__(self,camera,tc,pf,parent=None):
         super(SetupJob, self).__init__(parent)
 
@@ -110,25 +112,33 @@ class SetupJob( QtGui.QWidget ):
         self.pf = pf
         self.tc = tc
 
-        self.scaleFactor = 0.0
-
         self.ui = Ui_SetupJobForm()
         self.ui.setupUi(self)
         self.statusbar = parent.ui.statusbar
 
         # Set up preview
-        self.imageView = guiCommon.ImageViewer()
-        self.ui.layoutPreview.insertWidget(0,self.imageView)
-        self.ui.btnZoomIn.clicked.connect( self.imageView.zoomIn )
-        self.ui.btnZoomOut.clicked.connect( self.imageView.zoomOut )
-        self.ui.btnOne2one.clicked.connect( self.imageView.normalSize )
-        self.ui.btnFit.clicked.connect( self.imageView.fitToWindow )
- 
-        w,h = self.camera.resolution
-        self.previewQimg = QtGui.QImage(w, h, QtGui.QImage.Format_RGB32)
-        self.imageView.setImage( self.previewQimg )
-        self.imageView.fitToWindow()
+        self.scene = QtGui.QGraphicsScene()
+        self.scene.setBackgroundBrush(QtGui.QColor(64,64,64))
+        self.view  = QtGui.QGraphicsView(self.scene, self)
+        # Redirect wheelEvent to allow zooming with mousewheel
+        self.view.wheelEvent = self.viewWheelEvent 
+        # Mouse dragging to move preview
+        self.view.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
 
+        w,h = self.camera.resolution
+
+        self.previewQimg = QtGui.QImage(w, h, QtGui.QImage.Format_RGB32)
+        self.previewQimg.fill(QtGui.QColor(50,50,50))
+
+        self.view.setSceneRect(0, 0, w, h)
+        self.ui.layoutPreview.insertWidget(0,self.view)
+        self.ui.btnOne2one.clicked.connect( self.viewOne2one )
+
+        self.ui.btnZoomIn.clicked.connect( self.zoomIn )
+        self.ui.btnZoomOut.clicked.connect( self.zoomOut )
+        self.ui.btnFit.clicked.connect( self.fitToWindow )
+
+        self.setupViewScene()
 
         # Job Setup tab
         self.ui.btnChangeJobName.clicked.connect(self.changeJobName)
@@ -137,12 +147,20 @@ class SetupJob( QtGui.QWidget ):
         self.ui.spinShutter.valueChanged.connect( self.updateCameraShutterSpeed )
         self.ui.spinGainR.valueChanged.connect( self.updateCameraGains )
         self.ui.spinGainB.valueChanged.connect( self.updateCameraGains )
-        
+
         # Preview updater thread
         self.previewUpdater = CameraPreviewUpdater(self.camera,parent)
         self.previewUpdater.pictureReady.connect(self.updatePicture)
         self.previewUpdater.start()
         self.ui.btnStop.clicked.connect( self.previewUpdater.updatePicture )
+
+    def viewWheelEvent(self, event):
+        # Use mouse for zooming the preview image and limit extents
+        self.view.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
+        if event.delta() > 0:
+            self.zoomIn()
+        else:
+            self.zoomOut()
 
     def close(self):
         # Need to gracefully stop the preview update
@@ -200,12 +218,12 @@ class SetupJob( QtGui.QWidget ):
             self.filmType = f
             self.pf.init( f, imageSize=self.camera.resolution, expectedSize=(0,0), cx=0 )
             self.filmTypeChanged.emit(f)
-    
+
     def updateCameraShutterSpeed(self):
         # Called when using the spinbox
         self.camera.shutter_speed = int(self.ui.spinShutter.value())
         self.previewUpdater.updatePicture()
-    
+
     def updateCameraGains(self):
         awb_gains = ( float(self.ui.spinGainR.value()),
                       float(self.ui.spinGainB.value()) )
@@ -245,11 +263,56 @@ class SetupJob( QtGui.QWidget ):
         # Update the job dir label
         self.ui.lblProjectDir.setText( projectDir )
 
+    def setupViewScene(self):
+        # Set up the various objects on the view
+        # Pixmap of preview image
+        self.pixmap = self.scene.addPixmap( QtGui.QPixmap.fromImage(self.previewQimg) )
+        # Set an initial scale of 50%
+        self.view.scale(0.5,0.5)
+        self.view.centerOn(self.pixmap)
+        # Crop rectangle
+        pen = QtGui.QPen(QtCore.Qt.green, 11, QtCore.Qt.SolidLine)
+        self.cropRect = self.scene.addRect(400,350,1600,1200,pen)
+        self.cropRect.setOpacity(0.6)
+        # Perforation rectangle
+        pen.setColor(QtCore.Qt.red)
+        brush = QtGui.QBrush(QtGui.QColor(255, 0, 0,64))
+        self.perfRect = self.scene.addRect(150,800,250,300,pen,brush)
+        self.perfRect.setOpacity(0.6)
+        # ROI rectangle
+        pen.setColor(QtCore.Qt.yellow)
+        self.ROIrect = self.scene.addRect(130,500,290,922,pen)
+        self.ROIrect.setOpacity(0.6)
+        # Area for histogram calculation
+        pen = QtGui.QPen(QtCore.Qt.green, 7, QtCore.Qt.DotLine)
+        self.histRect = self.scene.addRect(500,450,1400,1000,pen)
+        self.histRect.setOpacity(0.4)
+
+
     def updatePicture(self,img):
         # Updates the preview image and histogram
         print("Updating picture {}".format(id(img)))
         self.previewQimg = guiCommon.makeQimage(img)
         hist = guiCommon.makeHistImage(img)
         self.histqi = guiCommon.makeQimage(hist)
-        self.imageView.setImage( self.previewQimg )
+        #self.imageView.setImage( self.previewQimg )
         self.ui.lblHistogram.setPixmap(QtGui.QPixmap.fromImage(self.histqi))
+        self.pixmap.setPixmap( QtGui.QPixmap.fromImage(self.previewQimg) )
+
+    def viewOne2one(self):
+        # Set the view to 100%
+        self.view.setTransform(QtGui.QTransform.fromScale(1.0, 1.0))
+
+    def fitToWindow(self):
+        # Resize to fit image in view window
+        self.view.fitInView(self.pixmap, QtCore.Qt.KeepAspectRatio)
+
+    def zoomIn(self):
+        # Use mouse for zooming the preview image and limit extents
+        if self.view.transform().m11() < 4.0: 
+            self.view.scale(self.scaleFactor, self.scaleFactor);
+
+    def zoomOut(self):
+        if self.view.transform().m11() > 0.1:
+            #Zoom out
+            self.view.scale(1.0 / self.scaleFactor, 1.0 / self.scaleFactor)
