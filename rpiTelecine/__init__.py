@@ -46,6 +46,12 @@ from rpiTelecine.perforation import (
     filmTypes,
     )
 
+import rpiTelecine.guiPreview
+
+import rpiTelecine.guiSetupJob
+
+import rpiTelecine.guiCommon
+
 import rpiTelecine.ui
 
 

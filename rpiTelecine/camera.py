@@ -55,7 +55,7 @@ import time
 # Subclass of PiCamera
 
 class TelecineCamera( PiCamera ):
-    
+
     def __init__(self):
         super(TelecineCamera, self).__init__(sensor_mode=2)
         # Fixed settings
@@ -63,21 +63,17 @@ class TelecineCamera( PiCamera ):
         self.framerate = 15              # Maximum allowed for full frame stills/preview/video 
         self.iso=100                     # Fix ISO for minimum sensor gain
         self.image_denoise=False         # Switch off image denoise - speeds up capture and retains detail in image
+        self.image_effect = 'none'
  
-    def setup_cam(self,awb_gains,shutter,drc='off',effect='none'):
+    def setup_cam(self,awb_gains,shutter):
         """ 
         Settings that can be changed when setting up the job
         Need fixed shutter speed, AWB etc for consistency between frames.
         """
-        #time.sleep(0.5)
         self.awb_gains=awb_gains
         self.awb_mode='off'              # Fix the awb_gains
-        self.shutter_speed=shutter       # Fix shutter speed
+        self.shutter_speed=int(shutter)  # Fix shutter speed
         self.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
-        if effect in self.IMAGE_EFFECTS:
-            self.image_effect = effect
-        else:
-            self.image_effect = 'none'
         self.vflip=True
 	
     def take_picture(self):
@@ -106,4 +102,3 @@ class TelecineCamera( PiCamera ):
 	    imgs.append( output.array )
 	self.shutter_speed = old_shutter
 	return imgs
-	
