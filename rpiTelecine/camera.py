@@ -60,12 +60,18 @@ class TelecineCamera( PiCamera ):
         super(TelecineCamera, self).__init__(sensor_mode=2)
         # Fixed settings
         self.resolution = self.MAX_IMAGE_RESOLUTION # 2592x1944
+        self.zoom = (0.0,0.0,1.0,1.0)
         self.framerate = 15              # Maximum allowed for full frame stills/preview/video 
         self.iso=100                     # Fix ISO for minimum sensor gain
         self.image_denoise=False         # Switch off image denoise - speeds up capture and retains detail in image
         self.image_effect = 'none'
+        self.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
+        self.vflip=True
+        self._effect_changed = False
+        self.default_crop = (0,0, self.MAX_IMAGE_RESOLUTION[0],self.MAX_IMAGE_RESOLUTION[1])
+        self.default_zoom = (0.0,0.0,1.0,1.0)
  
-    def setup_cam(self,awb_gains,shutter):
+    def setup_cam(self,shutter, awb_gains):
         """ 
         Settings that can be changed when setting up the job
         Need fixed shutter speed, AWB etc for consistency between frames.
@@ -73,16 +79,44 @@ class TelecineCamera( PiCamera ):
         self.awb_mode='off'              # Fix the awb_gains
         self.awb_gains=awb_gains
         self.shutter_speed=int(shutter)  # Fix shutter speed
-        self.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
-        self.vflip=True
-	
+
+    def set_camera_crop(self,x,y,w,h):
+        # convert x,y w,h into the resolution and zoom
+        maxX, maxY = float(self.MAX_IMAGE_RESOLUTION[0]),float(self.MAX_IMAGE_RESOLUTION[1])
+        # Some sanity checks
+        x = max( min(x,maxX-100),0 ) # min 0 to max-100
+        y = max( min(y,maxY-100),0 )
+        w = max( min(w,maxX-x),100 ) # 100 to max
+        h = max( min(h,maxY-y),100 )
+        # Calculate 'zoom' of the ROI, otherwise we get the whole frame resized to fit
+        xp = x / maxX
+        yp = y / maxY
+        wp = w / maxX
+        hp = h / maxY
+        self.resolution = (int(w),int(h))
+        print self.resolution
+        self.zoom = (xp,yp,wp,hp)
+        self.default_zoom = self.zoom
+        self.default_crop = (x,y,w,h)
+        print( "Default Crop: {} -> camera zoom {}".format( self.default_crop, self.zoom ) )
+    
+    def reset_zoom(self):
+        #x,y,w,h = self.default_crop
+        #self.zoom = self.default_zoom
+        #self.resolution = (w,h)
+        self.set_camera_crop(*self.default_crop)
+        
     def take_picture(self):
         """ 
         Returns an openCV compatible colour image 
         """
+        if self._effect_changed:
+            # Apply changed camera effect here
+            # Use to adjust colorbalance effect on camera?
+            pass
         with picamera.array.PiRGBArray(self) as output:
             self.capture(output, format='bgr')
-            return output.array 
+            return output.array
 
     def take_bracket_pictures(self):
 	""" 

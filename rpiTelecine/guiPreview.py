@@ -59,6 +59,8 @@ class LivePreview( QtGui.QWidget ):
         super(LivePreview, self).__init__(parent)
         self.camera = camera
         self.overscanOffset = overscanOffset
+        self.zoomAspect = 1.333
+        self.saved_camera_zoom = self.camera.zoom
         self.ui = Ui_livePreviewForm()
         self.ui.setupUi(self)
         self.statusbar = parent.ui.statusbar
@@ -85,13 +87,13 @@ class LivePreview( QtGui.QWidget ):
                 self.camera.start_preview()
             self.camera.preview.fullscreen = False
             previewPos = self.ui.lblPreview.mapToGlobal(QtCore.QPoint(0,0))
-            # Calculate w&h and position in centre of Preview area, keeping 4:3 aspect ratio
+            # Calculate w&h and position in centre of Preview area, keeping aspect ratio
             x = previewPos.x()
             y = previewPos.y()
             w = self.ui.lblPreview.width()
             h = self.ui.lblPreview.height()
-            neww = int(h*1.333)
-            newh = int(w/1.333)
+            neww = int(h*self.zoomAspect)
+            newh = int(w/self.zoomAspect)
             pw = neww if newh>h else w
             ph = newh if neww>w else h
             px = x+(w/2)-(pw/2)
@@ -102,7 +104,6 @@ class LivePreview( QtGui.QWidget ):
             self.updateZoom()
         else:
             if self.camera.preview!=None:
-                self.camera.zoom = [0,0,0,0]
                 self.camera.stop_preview()
                 
     def moveEvent(self, event):
@@ -113,13 +114,17 @@ class LivePreview( QtGui.QWidget ):
     def activatePreview(self, p=True):
         if p:
             print('Live preview activated')
+            self.saved_camera_zoom = self.camera.zoom
             self.previewActive = True
+            x,y,w,h = self.camera.default_crop
+            self.zoomAspect = float(h) / float(w)
             self.updatePreview()
             self.previewDisplayExposure()
         elif self.previewActive:
             print('Live preview off')
             self.previewActive = False
             self.updatePreview()
+            self.camera.zoom = self.saved_camera_zoom
 
 
     def changePreviewZoom(self,zoom):
