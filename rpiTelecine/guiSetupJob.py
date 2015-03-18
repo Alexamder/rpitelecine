@@ -375,7 +375,7 @@ class SetupJob( QtGui.QWidget ):
         self.previewQimg = QtGui.QImage(w, h, QtGui.QImage.Format_RGB32)
         self.previewQimg.fill(QtGui.QColor(50,50,50))
         self.scene.mainPixmap = self.previewQimg
-        
+
         # Timer used so we don't constantly update histogram
         self.histogramTimer = QtCore.QTimer()
         self.histogramTimer.setSingleShot(True)
@@ -398,15 +398,14 @@ class SetupJob( QtGui.QWidget ):
         self.ui.spinGainR.valueChanged.connect( self.updateCameraGains )
         self.ui.spinGainB.valueChanged.connect( self.updateCameraGains )
         self.ui.chkShowClipped.stateChanged.connect( self.makeClippedImage )
-        
+
         # Set crop position, size
         self.ui.spinCropX.valueChanged.connect( self.updateCropRect )
         self.ui.spinCropY.valueChanged.connect( self.updateCropRect )
         self.ui.spinCropW.valueChanged.connect( self.updateCropWidth )
         self.ui.spinCropH.valueChanged.connect( self.updateCropHeight )
         self.ui.spinHistArea.valueChanged.connect( self.scene.updateHistArea )
-        
-        #self.scene.cropMaxChanged.connect( self.updateMaximumCrop )
+
         self.ui.cmbAspectFix.currentIndexChanged.connect( self.setAspectRatio )
 
         # Preview updater thread
@@ -414,6 +413,9 @@ class SetupJob( QtGui.QWidget ):
         self.previewUpdater.pictureReady.connect(self.updatePicture)
         self.previewUpdater.start()
         self.ui.btnStop.clicked.connect( self.previewUpdater.updatePicture )
+
+        # Update or initialise perforation detection
+        self.scene.doubleClicked.connect( self.locatePerforation )
 
     def close(self):
         # Need to gracefully stop the preview update
@@ -675,3 +677,40 @@ class SetupJob( QtGui.QWidget ):
         self.cropPos = (x,y)
         self.cropSize = (w,h)        
         print("Crop: pos:{} size:{} maxW:{} maxH:{}".format(self.cropPos,self.cropSize,self.ui.spinCropW.maximum(),self.ui.spinCropH.maximum()) )
+
+    @property
+    def perforation(self):
+        filmType = self.pf.filmType
+        cx = self.pf.ROIcentrexy[0]
+        w, h = self.pf.expectedSize
+        return ( filmType, int(cx), int(w), int(h) )
+
+    @perforation.setter
+    def perforation(self,settings):
+        filmType, cx, w, h = settings
+        cam_crop = self.camera.camera_crop
+        imageSize = cam_crop[2:]
+        expectedSize = (w,h)
+        self.pf.init( filmType, imageSize,expectedSize,int(cx) )
+        print "expectedSize: {}".format(expectedSize)
+        
+    def locatePerforation(self, pos ):
+        # Do an initial perforation find based on the supplied coordinates
+        self.pf.findFirstFromCoords( self.previewImg, pos, 20 )
+        if self.pf.found:
+            x,y = self.pf.position
+            w,h = self.pf.expectedSize
+            # Now do a normal find
+            self.pf.find( self.previewImg )
+            if self.pf.found:
+                print "Perforation found: {} {}".format(self.pf.position,self.pf.expectedSize)
+                text = "<b>Perforation found</b><br><br>Centre: {} Size: {}".format(self.pf.position,self.pf.expectedSize)
+            else:
+                text = "<b>Perforation not found</b><br><br>Try adjusting exposure and double clicking again in the centre of the perforation."
+            self.ui.lblPerforationInfo.setText(text)
+            
+                    
+
+
+
+

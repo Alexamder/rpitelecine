@@ -156,6 +156,7 @@ class TelecinePerforation():
         # If an expected perforation size is set, then ROI is based on size of perforation
         img_h,img_w = self.imageSize
         if self.isInitialised:
+            print "IS INITIALISED"
             # Already know expected size, so use smaller ROI
             # ROI height and position on Y axis
             # Top of ROI for initialised perforation detection
@@ -182,6 +183,7 @@ class TelecinePerforation():
         self.ROIxy = ( roiL, y )
         self.ROIwh = ( roiR-roiL, h )
         self.ROIslice = np.index_exp[ y:y+h, roiL:roiR ]         # Create the slice object for making the ROI
+        print("img: {} roiR: {} roiL: {} h: {}".format(self.imageSize, roiR,roiL,h))
         self.ROIimg = np.zeros( (roiR-roiL, h), dtype=np.uint8)  # Initialise space for the ROI image 
 
     def setROIimg(self,img):

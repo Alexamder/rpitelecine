@@ -41,10 +41,10 @@ class ControlMainWindow(QtGui.QMainWindow):
         self.setWindowTitle("rpiTelecine")
         self.ui = Ui_TelecinePreview()
         self.ui.setupUi(self)
+
         # Job setup tab
         self.setupJob = guiSetupJob.SetupJob(camera,tc,pf,parent=self)
         self.ui.tabs.insertTab(self._setupTab,self.setupJob,'&Job setup')
-
         self.setupJob.jobNameChanged.connect(self.readJobSettings)
 
         # Capture tab
@@ -62,9 +62,10 @@ class ControlMainWindow(QtGui.QMainWindow):
         self.ui.tabs.setCurrentIndex( self._setupTab )
 
         tc.light_on()
+
         # Load default and job settings
         self.readDefaultSettings()
-        self.readJobSettings()        
+        self.readJobSettings()
 
     def closeEvent(self, event):
         self.setupJob.close() # gracefully close the preview image thread 
@@ -109,7 +110,7 @@ class ControlMainWindow(QtGui.QMainWindow):
                                        gain_r=settings.value("gain_r",1.0),
                                        gain_b=settings.value("gain_b",1.0) )
         x,y,w,h = settings.value( "defaultCrop", (0,0, camera.MAX_IMAGE_RESOLUTION[0],camera.MAX_IMAGE_RESOLUTION[1]) )
-        camera.set_camera_crop( int(x),int(y),int(w),int(h) )
+        camera.camera_crop = ( int(x),int(y),int(w),int(h) )
         settings.endGroup()
         
         settings.beginGroup( "project" )
@@ -118,7 +119,6 @@ class ControlMainWindow(QtGui.QMainWindow):
         self.setupJob.setJobDir( settings.value('jobDir', self._defaultJobDir ) )
         self.setupJob.setFilmType( settings.value('filmType','super8') )
         settings.endGroup()
-
 
     def writeDefaultSettings(self):
         # Write default settings
@@ -143,7 +143,7 @@ class ControlMainWindow(QtGui.QMainWindow):
         settings.setValue( "filmType", self.setupJob.filmType )
         settings.endGroup()
         settings.beginGroup( "camera" )
-        settings.setValue( "defaultCrop", camera.default_crop )
+        settings.setValue( "defaultCrop", camera.camera_crop )
         settings.endGroup()
 
     def readJobSettings(self):
@@ -174,14 +174,14 @@ class ControlMainWindow(QtGui.QMainWindow):
         histogramArea = int(settings.value("histogram_area", 75) )
         self.setupJob.crop = ( crop_offset_x, crop_offset_y, 
                                crop_w, crop_h, histogramArea )
-        #self.setupJob.setupCrop( crop_x, crop_y, crop_w, crop_h, histogramArea )
         settings.endGroup()
 
         settings.beginGroup( "perforation" )
+        film_type = settings.value("film_type","super8")
         perf_cx = int(settings.value("perf_cx", 0) )
         perf_w = int(settings.value("perf_w", 0) )
         perf_h = int(settings.value("perf_h", 0) )
-        self.setupJob.perforation = ( perf_cx, perf_w, perf_h )
+        self.setupJob.perforation = ( film_type, perf_cx, perf_w, perf_h )
         settings.endGroup()
 
         settings.beginGroup( "transport" )
@@ -222,7 +222,8 @@ class ControlMainWindow(QtGui.QMainWindow):
             settings.endGroup()
             
             settings.beginGroup( "perforation" )
-            perf_cx, perf_w, perf_h = self.setupJob.perforation
+            film_type, perf_cx, perf_w, perf_h = self.setupJob.perforation
+            settings.setValue("film_type", film_type)
             settings.setValue("perf_cx", perf_cx)
             settings.setValue("perf_w", perf_w)
             settings.setValue("perf_h", perf_h)

@@ -70,19 +70,3 @@ def makeQimage(img):
     qi.ndimage = bgra   # Need to save the underlying Numpy array with the Qimage
     return qi
 
-# Class to implement the zoomable ImageViewer by subclassing QScrollArea
-# Will probably want to extend this 
-
-class ClickableLabel(QtGui.QLabel):
-
-    clicked = QtCore.Signal(QtCore.QPoint)
-    doubleClicked = QtCore.Signal(QtCore.QPoint)
-
-    def __init(self, parent=None):
-        super(ClickableLabel).__init__(self, parent)
- 
-    def mouseReleaseEvent(self, ev):
-        self.clicked.emit(ev.pos())
-
-    def mouseDoubleClickEvent(self, ev):
-        self.doubleClicked.emit(ev.pos())

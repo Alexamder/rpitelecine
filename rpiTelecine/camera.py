@@ -68,7 +68,7 @@ class TelecineCamera( PiCamera ):
         self.sharpness = -100            # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
         self.vflip=True
         self._effect_changed = False
-        self.default_crop = (0,0, self.MAX_IMAGE_RESOLUTION[0],self.MAX_IMAGE_RESOLUTION[1])
+        self.camera_crop = (0,0, self.MAX_IMAGE_RESOLUTION[0],self.MAX_IMAGE_RESOLUTION[1])
         self.default_zoom = (0.0,0.0,1.0,1.0)
  
     def setup_cam(self,shutter, awb_gains):
@@ -80,8 +80,14 @@ class TelecineCamera( PiCamera ):
         self.awb_gains=awb_gains
         self.shutter_speed=int(shutter)  # Fix shutter speed
 
-    def set_camera_crop(self,x,y,w,h):
+    @property
+    def camera_crop(self):
+        return self._default_crop
+    
+    @camera_crop.setter
+    def camera_crop(self, crop ):
         # convert x,y w,h into the resolution and zoom
+        x,y,w,h = crop
         maxX, maxY = float(self.MAX_IMAGE_RESOLUTION[0]),float(self.MAX_IMAGE_RESOLUTION[1])
         # Some sanity checks
         x = max( min(x,maxX-100),0 ) # min 0 to max-100
@@ -96,9 +102,9 @@ class TelecineCamera( PiCamera ):
         self.resolution = (int(w),int(h))
         print self.resolution
         self.zoom = (xp,yp,wp,hp)
-        self.default_zoom = self.zoom
-        self.default_crop = (x,y,w,h)
-        print( "Default Crop: {} -> camera zoom {}".format( self.default_crop, self.zoom ) )
+        self._default_zoom = self.zoom
+        self._default_crop = (x,y,w,h)
+        print( "Default Crop: {} -> camera zoom {}".format( self._default_crop, self.zoom ) )
     
     def reset_zoom(self):
         #x,y,w,h = self.default_crop
