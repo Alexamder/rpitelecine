@@ -35,6 +35,7 @@ from PySide import QtGui, QtCore
 bins = np.arange(64).reshape(64,1)
 
 def makeHistImage(img):
+    # Make an RGB histogram of the image using OpenCV
     h = np.zeros((300,256,3))
     h.fill(255)
     color = [ (255,0,0),(0,255,0),(0,0,255) ]
@@ -47,6 +48,7 @@ def makeHistImage(img):
     return np.flipud(h)
 
 def makeHistGreyImage(img, ch=None):
+    # Make a single channel histogram
     h = np.zeros((200,256,3),dtype=np.uint8)
     h.fill(255)
     if ch==None or ch>2:
@@ -62,10 +64,16 @@ def makeHistGreyImage(img, ch=None):
     return np.flipud(h)
 
 def makeQimage(img):
+    # Make a Qt QImage from a Numpy or OpenCV image
+    # OpenCV expects data as bgr format - as does Qt, so it's necessary
+    # just to copy the data
     h,w = img.shape[:2]
     bgra = np.empty( (h,w,4),dtype=np.uint8,order='C' )
-    bgra[...,:3] = img 
-    #bgra[...,3].fill(255)
+    if img.shape[2]==4:
+        bgra[...] = img[...]
+    else:
+        bgra[...,:3] = img 
+        #bgra[...,3].fill(255)
     qi = QtGui.QImage(bgra.data,w,h,QtGui.QImage.Format_RGB32)
     qi.ndimage = bgra   # Need to save the underlying Numpy array with the Qimage
     return qi

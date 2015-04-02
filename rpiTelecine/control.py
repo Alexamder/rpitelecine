@@ -58,6 +58,7 @@
 
 from __future__ import division
 from wiringpi2 import *
+import time
 
 class TelecineControl():
     
@@ -94,15 +95,15 @@ class TelecineControl():
 	wiringPiSetupSys()
 	mcp23s17Setup(self.pin_base, 0, 0) 
 	# Stepper Motors
-	self.m1 = stepperMotor(self.m1_step_pin, self.m1_dir_pin, self.m1_en_pin)
-	self.m2 = stepperMotor(self.m2_step_pin, self.m2_dir_pin, self.m2_en_pin)
+	self.m1 = StepperMotor(self.m1_step_pin, self.m1_dir_pin, self.m1_en_pin)
+	self.m2 = StepperMotor(self.m2_step_pin, self.m2_dir_pin, self.m2_en_pin)
 	# DC motors for takeup reels
-	self.reel1 = reelMotor(self.reel1_pin)
-	self.reel2 = reelMotor(self.reel2_pin)
+	self.reel1 = ReelMotor(self.reel1_pin)
+	self.reel2 = ReelMotor(self.reel2_pin)
 	# LED control
-	self.led = ledControl(self.led_pin)
+	self.led = LedControl(self.led_pin)
 	# Shutter release
-	self.shutter_release = shutterRelease(self.focus_pin, self.shutter_pin)
+	self.shutter_release = ShutterRelease(self.focus_pin, self.shutter_pin)
 	self.m1.on()
 	self.m2.on()
 	# Direction of film travel - 
@@ -194,7 +195,7 @@ class TelecineControl():
 	self.m1.off()
 	self.m2.off()
 	
-class stepperMotor():
+class StepperMotor():
 			
     """
     Simple Stepper motor control class
@@ -221,11 +222,7 @@ class stepperMotor():
     delay = 1 # Big Easy Driver requires a pulse of 1uS or longer.
     motor_on = False
     
-    rotation_steps = 3200
-    # Big Easy Driver defaults to 3200 steps per 360degree rotation
-    # if the motor has 200 steps per 360degree.
-    # Change this if your motor is different
-    
+   
     def __init__(self,step_pin,dir_pin,en_pin):
         
         self.step_pin = step_pin
@@ -265,20 +262,8 @@ class stepperMotor():
         # Go s steps
         for i in xrange(0,s):
             self.step()
-    
-    def rotate_full(self):
-        # Make a full rotation
-        self.steps(self.rotation_steps)
-            
-    def rotate_half(self):
-        # Make a half rotation
-        self.steps(self.rotation_steps//2)
-     
-    def rotate_quarter(self):
-        # Make a quarter rotation
-        self.steps(self.rotation_steps//4)
 
-class ledControl:
+class LedControl:
     """
     Simple Class to control the LED power
     """
@@ -295,12 +280,12 @@ class ledControl:
 	digitalWrite( self.pin, False )
 
 
-class reelMotor:
+class ReelMotor:
     """
 	Class to control DC motors for film spools
 	The motors are controlled simply by switching on a wiringpi pin
     """
-    pulse_delay = 35	# Pulse delay in milliseconds
+    pulse_delay = 35/1000	# Pulse delay in milliseconds
 
     def __init__(self,pin):
 	self.pin = pin
@@ -315,11 +300,12 @@ class reelMotor:
 
     def pulse(self):
 	digitalWrite( self.pin, True )
-	delay( self.pulse_delay )
+	time.sleep(self.pulse_delay)
+	#delay( self.pulse_delay )
 	digitalWrite( self.pin, False )
 
 
-class shutterRelease():
+class ShutterRelease():
     """
     Telecine SLR shutter release class
 

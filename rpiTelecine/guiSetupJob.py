@@ -34,6 +34,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import division
+from timer import Timer
 import os
 import numpy as np
 import time
@@ -46,12 +47,12 @@ import rpiTelecine.guiCommon as guiCommon
 class CameraPreviewUpdater(QtCore.QThread):
     # Thread to update camera preview image
     # It will take a picture immediate on a call to takePicture
-    # or after 1/2 second after calling updatePicture
+    # or after 3/4 second after calling updatePicture
     # to allow for updates in the UI before taking picture
     pictureReady = QtCore.Signal(np.ndarray)
     timer = QtCore.QTimer()
     mutex = QtCore.QMutex()
-    delay = 500
+    delay = 750
     exiting = False
     ready = False
     active = True
@@ -71,14 +72,12 @@ class CameraPreviewUpdater(QtCore.QThread):
         self.timer.start(self.delay)
 
     def run(self):
-        global previewImg
         while not self.exiting:
             if self.active and self.ready:
                 print "Taking picture"
                 self.ready = False
                 img = self.camera.take_picture()
                 self.mutex.lock()
-                previewImg = img
                 print("Picture shape: {}".format(img.shape))
                 self.mutex.unlock()
                 print "Picture taken"
@@ -95,6 +94,9 @@ class CameraPreviewUpdater(QtCore.QThread):
         self.exiting = True
         self.mutex.unlock()
         self.wait()
+
+#*******************************************************************************
+
 '''
 Class for the preview image - showing camera image, crop lines, etc.
 Elements we show are: Current frame image from camera, optional overlay
@@ -103,6 +105,7 @@ in red; perforation detection area in yellow; offset between detected
 perforation and centre of detection area used for correcting transport to
 the next frame
 '''
+
 class PreviewScene( QtGui.QGraphicsScene ):
 
 
@@ -117,12 +120,12 @@ class PreviewScene( QtGui.QGraphicsScene ):
         # Set up the various objects on the view
         # Pixmap of preview image
         print "Adding pixmap"
-        self.pixmap = self.addPixmap(QtGui.QPixmap(500,500))
-        print self.pixmap
-
+        self.pixmap = self.addPixmap(QtGui.QPixmap(400,300))
+        self.pixmap.setPos( 0,0 )
+        
         # Pixmap for clipped image
-        self.clippedPixmap = self.addPixmap(QtGui.QPixmap(500,500))
-        #self.clippedPixmap.setOpacity(0.75)
+        self.clippedPixmap = self.addPixmap(QtGui.QPixmap(10,10))
+        self.clippedPixmap.setOpacity(0.75)
         self.clippedPixmap.setVisible(False)
 
         # Crop rectangle
@@ -154,12 +157,13 @@ class PreviewScene( QtGui.QGraphicsScene ):
                                self.vDiffLine )
         self.guidelinesVisible = False
         # We can dim the guidelines if we haven't detected a perforation
-        self.guildelinesBright = True
+        self.guidelinesBright = True
         # Offset from centre of perforation to top left of crop rectangle
-        
-        self.cropOffset = None
-        self.perforationCentre = None
 
+        self.perforationCentre = QtCore.QPoint(0,0)
+        self.cropOffset = QtCore.QPoint(0,0)
+
+    # Guidelines - all on or off, opaque or feint
     @property
     def guidelinesVisible(self):
         return self._guidelinesVisible
@@ -179,75 +183,69 @@ class PreviewScene( QtGui.QGraphicsScene ):
     def guidelinesBright(self,bright):
         bright = (bright==True)
         self._guidelinesBright = bright
-        opacity = 0.8 if bright else 0.4
+        opacity = 0.7 if bright else 0.3
         for item in self.guidelineList:
             item.setOpacity( opacity )
 
-    @property
-    def cropOffset(self):
-        return self._cropOffset
+    # Crop offset - triggers redrawing of cropRect
 
-    @cropOffset.setter
-    def cropOffset(self,offset):
-        if type(offset) == tuple:
-            self._cropOffset = offset
-            # update crop rectangle position
-            perfCentre = self.perfRect.rect().center()
-            newCropTopLeft = perfCentre + QtCore.QPoint(*offset)
-            self.cropRect.setPos( newCropTopLeft )
-        else:
-            self._cropOffset = None
-
-    @property
-    def cropSize(self):
-        return self._cropSize
-
-    @cropSize.setter
-    def cropSize(self,size):
-        self._cropSize = size
-        self.cropRect.rect().setSize(*size)
-
-    @property
-    def perforationCentre(self):
-        return self._perforationCentre
-
-    @perforationCentre.setter
-    def perforationCentre(self,centre):
-        if type(centre) == tuple:
-            self._perforationCentre = centre
-            # Calulate offset between centre and top left of perforation
-            offset = (self.perfRect.rect().size() / 2).toTuple()
-            perfCentre = QtCore.QPoint(*centre)
-            newPos = perfCentre - QtCore.QPoint(*offset)
-            self.perfRect.setPos(newPos)
-            # Now work out difference between centre and roi Centre
-            roiCentre = self.ROIrect.rect().centre()
-            self.vDiffLine.setLine( roiCentre, perfCentre )
-        else:
-            self._perforationCentre = None
-            
+    @property 
+    def crop(self):
+        return self._crop
+    
+    @crop.setter
+    def crop(self, c ):
+        offsetX, offsetY, w, h = c
+        offset = QtCore.QPoint( *(offsetX,offsetY) )
+        centre = self.perfRect.rect().center()
+        perfPos = self.perfRect.pos()
+        # Make sure we don't move off the edge of the image
+        newX, newY = (perfPos+centre+offset).toTuple()
+        newX = max( newX, 0 )
+        newY = max( newY, 0 )
+        self.cropRect.setPos( newX, newY )
+        # Make sure we don't draw over the edge of the image
+        x,y = self.cropRect.pos().toTuple()
+        maxWidth = self.width()
+        maxHeight = self.height()
+        #w = min( x+w, maxWidth-x )
+        #h = min( y+h, maxHeight-y )
+        self.cropRect.setRect(0,0,w,h)
+        self.updateHistRect()
+        
+    # Perforation rectangle
 
     @property
-    def perforationSize(self):
-        return self._perforationSize
+    def perforationRect(self):
+        return self.perfRect.rect().toTuple()
 
-    @perforationSize.setter
-    def perforationSize(self,size):
-        self._perforationSize = size
-        # Resize the perforation rectangle and centre it on the original centre
-        centre = self.perfRect.rect().center().toTuple()
-        self.perfRect.rect().setSize(*size)
-        self.perforationCentre = centre
-
+    @perforationRect.setter
+    def perforationRect(self,rect):
+        print "setting perforation rect {}".format(rect)
+        self.perfRect.setRect(*rect)
+        self.perforationCentre = self.perfRect.rect().center()
+        x,y = self.perforationCentre.toTuple()
+        x1,y1 = self.ROIcentre.toTuple()
+        self.vDiffLine.setLine( x,y,x,y1 )
+    
+    # ROI rectangle
+    
     @property
     def roiRect(self):
         return self._roiRect
 
     @roiRect.setter
     def roiRect(self,rect):
+        x,y,w,h = rect
+        print("Setting ROI rectangle: {}".format(rect))
         self._roiRect = rect
-        self.ROIrect.setRect( *rect )
-        
+        self.ROIrect.setPos( x,y )
+        self.ROIrect.setRect( 0,0,w,h )
+        self.ROIcentre = self.ROIrect.rect().center() + self.ROIrect.pos()
+        print self.ROIcentre
+
+    # Image
+
     @property 
     def mainPixmap(self):
         return self.pixmap.pixmap()
@@ -255,8 +253,8 @@ class PreviewScene( QtGui.QGraphicsScene ):
     @mainPixmap.setter
     def mainPixmap(self,qimg):
         self.pixmap.setPixmap( QtGui.QPixmap.fromImage(qimg) )
-        self.setSceneRect( self.pixmap.pixmap().rect() )
-
+        self.setSceneRect( QtCore.QRectF(0,0,qimg.width(),qimg.height()) )
+        
     @property
     def clipPixmap(self):
         return self.clippedPixmap.pixmap()
@@ -281,25 +279,24 @@ class PreviewScene( QtGui.QGraphicsScene ):
         return self._histCropProportion
 
 
-    def updateCrop( self, x,y,w,h ):
-        self.cropRect.setRect(x,y,w,h)
-        self.updateHistRect()  
-
     def updateHistArea(self,val):
         self.histRectProportion = float(val) / 100
         self.updateHistRect()
 
     def updateHistRect(self):
         # Set histogram rectangle inside crop rectangle
-        x,y,w,h = self.cropRect.rect().getRect()
+        w,h = self.cropRect.rect().size().toTuple()
+        x,y = self.cropRect.pos().toTuple()
         hw, hh = w*self.histRectProportion, h*self.histRectProportion
         hx, hy = x+((w-hw)/2), y+((h-hh)/2)
-        self.histRect.setRect(hx,hy,hw,hh)
+        self.histRect.setPos( hx,hy )
+        self.histRect.setRect( 0,0,hw,hh )
         self.histRectChanged.emit()
 
     def getHistogramRect(self):
         # Returns histogram rectangle
-        x,y,w,h = self.histRect.rect().getRect()
+        w,h = self.histRect.rect().size().toTuple()
+        x,y = self.histRect.pos().toTuple()
         visible = self.histRect.isVisible()
         return (visible, x,y,w,h)
 
@@ -341,6 +338,8 @@ class PreviewView( QtGui.QGraphicsView ):
         if self.transform().m11() > 0.1:
             #Zoom out
             self.scale(1.0 / self.scaleFactor, 1.0 / self.scaleFactor)
+            
+#*******************************************************************************
 
 class SetupJob( QtGui.QWidget ):
 
@@ -348,8 +347,13 @@ class SetupJob( QtGui.QWidget ):
     filmTypeChanged = QtCore.Signal(str) # Emits new film type
     jobNameChanged = QtCore.Signal(str) # Emits a change of job name
     outputDirectoryChanged = QtCore.Signal(str) # Emits new output dir name
+    finishedMovingFilm = QtCore.Signal() # finished moving film transport
+
+    _transport = { 'stepsFwd':0, 'stepsBack':0, 'pixelsPerStep':0 }
 
     cropAspectRatio = None
+    
+    imageTaken = False # Prevents stuff happening before we have a picture
 
     def __init__(self,camera,tc,pf,parent=None):
         super(SetupJob, self).__init__(parent)
@@ -359,36 +363,36 @@ class SetupJob( QtGui.QWidget ):
         self.filmType = 'super8'
         self.pf = pf
         self.tc = tc
-        
+
         self.perforationFound = False
 
         self.ui = Ui_SetupJobForm()
         self.ui.setupUi(self)
         self.statusbar = parent.ui.statusbar
 
-        self.scene = PreviewScene(parent)
-
+        self.scene = PreviewScene()
+        
         # Set up preview with blank image
-        w,h = self.imageWidth, self.imageHeight = self.camera.MAX_IMAGE_RESOLUTION
+        self.imageWidth, self.imageHeight = w,h = 1024,800
         self.previewImg = np.zeros( (h,w,3), dtype=np.uint8 )
         self.clippedImg = np.zeros( (h,w,3), dtype=np.uint8 )
-        self.previewQimg = QtGui.QImage(w, h, QtGui.QImage.Format_RGB32)
-        self.previewQimg.fill(QtGui.QColor(50,50,50))
-        self.scene.mainPixmap = self.previewQimg
-
+        self.previewQimg = guiCommon.makeQimage(self.previewImg)
+        self.scene.setSceneRect(0, 0, w, h)
+        
         # Timer used so we don't constantly update histogram
         self.histogramTimer = QtCore.QTimer()
         self.histogramTimer.setSingleShot(True)
         self.histogramTimer.timeout.connect(self.makeHistogram)
         self.scene.histRectChanged.connect( self.makeHistogramDelayed )
-
+        
         # Preview Window
-        self.view = PreviewView(self.scene,self)
+        self.view = PreviewView(self.scene)
         self.ui.layoutPreview.insertWidget(0,self.view)
         self.ui.btnOne2one.clicked.connect( self.view.One2one )
         self.ui.btnZoomIn.clicked.connect( self.view.zoomIn )
         self.ui.btnZoomOut.clicked.connect( self.view.zoomOut )
         self.ui.btnFit.clicked.connect( self.view.fitToWindow )
+       
 
         # Job Setup tab
         self.ui.btnChangeJobName.clicked.connect(self.changeJobName)
@@ -399,12 +403,10 @@ class SetupJob( QtGui.QWidget ):
         self.ui.spinGainB.valueChanged.connect( self.updateCameraGains )
         self.ui.chkShowClipped.stateChanged.connect( self.makeClippedImage )
 
-        # Set crop position, size
-        self.ui.spinCropX.valueChanged.connect( self.updateCropRect )
-        self.ui.spinCropY.valueChanged.connect( self.updateCropRect )
-        self.ui.spinCropW.valueChanged.connect( self.updateCropWidth )
-        self.ui.spinCropH.valueChanged.connect( self.updateCropHeight )
-        self.ui.spinHistArea.valueChanged.connect( self.scene.updateHistArea )
+        # Crop toolbox disabled until we have first image
+        self.ui.toolCrop.setEnabled( False )
+        # Autocrop button only works after a perforation is available
+        self.ui.btnAutoCrop.setEnabled( False )
 
         self.ui.cmbAspectFix.currentIndexChanged.connect( self.setAspectRatio )
 
@@ -412,10 +414,25 @@ class SetupJob( QtGui.QWidget ):
         self.previewUpdater = CameraPreviewUpdater(self.camera,parent)
         self.previewUpdater.pictureReady.connect(self.updatePicture)
         self.previewUpdater.start()
-        self.ui.btnStop.clicked.connect( self.previewUpdater.updatePicture )
-
+        
+        # Perforation checking options
+        self.ui.radioTopEdge.toggled.connect(self.setCheckEdges)
+        self.ui.radioBottomEdge.toggled.connect(self.setCheckEdges)
+        self.ui.radioTopEdge.toggled.connect(self.setCheckEdges)
+        self.ui.checkLeftEdge.stateChanged.connect(self.setLeftEdgeCheck)
+        
+        # Transport
+        self.ui.btnStop.clicked.connect( self.stopAndCentre )
+        self.ui.btnNudgeU.clicked.connect( self.nudgeFilmFwd )
+        self.ui.btnNudgeD.clicked.connect( self.nudgeFilmBack )
+        
         # Update or initialise perforation detection
-        self.scene.doubleClicked.connect( self.locatePerforation )
+        self.scene.doubleClicked.connect( self.locateFirstPerforation )
+        
+        # Film Transport
+        self.finishedMovingFilm.connect( self.previewUpdater.updatePicture )
+        self.transport = (285,285,3.5)
+        self.ui.btnCalibrate.clicked.connect( self.calibrateTransport )
 
     def close(self):
         # Need to gracefully stop the preview update
@@ -457,12 +474,12 @@ class SetupJob( QtGui.QWidget ):
 
     def changeFilmType(self):
         # Warning message before changing film
-        f = ('Standard 8','Super 8') if self.filmType=='std8' else ('Super 8','Standard 8')
+        f = ('Standard 8','Super 8') if self.filmType == 'std8' else ('Super 8','Standard 8')
         message = 'Are you sure you want to change<br>from <b>{}</b> to <b>{}</b> film?<br>Some settings will be reset.'.format(*f)
         reply = QtGui.QMessageBox.question(self, 'Message',message, QtGui.QMessageBox.Yes | 
             QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         if reply == QtGui.QMessageBox.Yes:
-            f = 'super8' if self.filmType=='std8' else 'std8'
+            f = 'super8' if self.filmType == 'std8' else 'std8'
             self.setFilmType(f,forceChange=True)
 
     def setFilmType(self, f, forceChange=False):
@@ -518,24 +535,43 @@ class SetupJob( QtGui.QWidget ):
         # Update the job dir label
         self.ui.lblProjectDir.setText( projectDir )
 
+    def initCropEditing(self):
+        # Allow editing of crop position etc, size after we have first image
+        x = self.ui.spinCropX.value()
+        y = self.ui.spinCropY.value()
+        w = self.ui.spinCropW.value()
+        h = self.ui.spinCropH.value()
+        self.scene.cropOffset = ( x,y )
+        self.scene.cropSize = ( w,h )
+        self.ui.toolCrop.setEnabled( True )
+        self.ui.spinCropX.valueChanged.connect( self.updateCropRect )
+        self.ui.spinCropY.valueChanged.connect( self.updateCropRect )
+        self.ui.spinCropW.valueChanged.connect( self.updateCropWidth )
+        self.ui.spinCropH.valueChanged.connect( self.updateCropHeight )
+        self.ui.spinHistArea.valueChanged.connect( self.scene.updateHistArea )
+        self.ui.btnAutoCrop.clicked.connect( self.autoCrop )
+
+    @QtCore.Slot(np.ndarray)
     def updatePicture(self,img):
         # Updates the preview image and histogram
         print("Updating picture {}".format(id(img)))
         # keep preview image around to be able to recreate histogram
         self.previewImg = img
+        self.imageHeight, self.imageWidth = img.shape[:2]
+        if not( self.imageTaken ):
+            # set up the crop for the first time
+            self.imageTaken = True
+            self.initCropEditing()
+            self.setSpinBoxRange( self.ui.spinCropW, 200, self.imageWidth )
+            self.setSpinBoxRange( self.ui.spinCropH, 200, self.imageHeight )
+
+        print( 0,0,self.imageWidth,self.imageHeight )
         self.previewQimg = guiCommon.makeQimage(img)
         self.scene.mainPixmap = self.previewQimg
-        #self.scene.updatePixmap(self.previewQimg)
-        w,h = self.camera.resolution
-        self.imageWidth, self.imageHeight = w,h
-        print("Width {}, Height {}".format(self.imageWidth, self.imageHeight))
-        self.view.setSceneRect(0, 0, w, h)
-        self.makeHistogram()
+        self.locatePerforation()
+        self.makeHistogramDelayed()
         self.makeClippedImage()
-        
-        self.scene.guidelinesVisible = self.perforationFound
-        if self.perforationFound:
-            pass
+
         
     def makeHistogramDelayed(self):
         if self.histogramTimer.isActive():
@@ -560,12 +596,14 @@ class SetupJob( QtGui.QWidget ):
         # Makes an image of clipped pixels - i.e 254/255 using OpenCV
         if self.ui.chkShowClipped.isChecked():
             ret,img = cv2.threshold(self.previewImg,254,255,cv2.THRESH_BINARY)
+            #mask = (img.sum( axis=2 )>0)*255 # Make a transparency mask
+            #img = np.dstack([img,mask])
             self.clippedImg = img
             self.clippedQimg = guiCommon.makeQimage(img)
-            self.scene.clippedPixmap = self.clippedQimg
+            self.scene.clipPixmap = self.clippedQimg
             #self.scene.updateClippedPixmap(self.clippedQimg)
         else:
-            self.scene.clippedPixmap = None
+            self.scene.clipPixmap = None
             #self.scene.updateClippedPixmap(None)
 
     def setAspectRatio(self,idx):
@@ -595,6 +633,7 @@ class SetupJob( QtGui.QWidget ):
     @crop.setter
     def crop( self, crop ):
         x,y,w,h,ha = crop
+        print "Setting Crop: {}".format(crop)
         # Set up crop controls
         self.ui.spinCropX.setValue( x )
         self.ui.spinCropY.setValue( y )
@@ -603,81 +642,72 @@ class SetupJob( QtGui.QWidget ):
         self.ui.spinHistArea.setValue( ha )
         self.updateCropRect()
     
-    def updateSpinBox(self,sb,val):
-        # Update a spinbox while blocking signals
-        # Useful while adjusting a fixed aspect ratio crop
+    def setSpinBox(self,sb,val):
+        # Update a spinbox without sending the changed signals
         sb.blockSignals(True)
         sb.setValue(val)
         sb.blockSignals(False)
     
+    def setSpinBoxRange( self, sb, low, high ):
+        sb.blockSignals(True)
+        sb.setRange( low, high )
+        sb.blockSignals(False)
+    
     def updateCropWidth(self,w):
         # called on change of size
-        maxW = self.imageWidth-50
+        maxW = self.imageWidth
         print "updating W: maxW {}".format(maxW)
-        self.ui.spinCropX.setRange( 25,maxW-w )
-        self.ui.spinCropW.setRange( 50,maxW )
         if type(self.cropAspectRatio) is float:
             print "update width aspect"
-            maxH = self.imageHeight-50
-            h = min(w // self.cropAspectRatio,maxH)
-            self.updateSpinBox( self.ui.spinCropH, h )
-            w = min(h * self.cropAspectRatio,maxW)
-            self.updateSpinBox( self.ui.spinCropW, w )
+            h = w // self.cropAspectRatio
+            self.setSpinBox( self.ui.spinCropH, h )
         self.updateCropRect()
 
     def updateCropHeight(self,h):
         # called on change of size
-        maxH = self.imageHeight-50
-        self.ui.spinCropY.setRange( 25,maxH-h )
-        self.ui.spinCropH.setRange( 50,maxH )
+        maxH = self.imageHeight
         print "updating H: maxH {}".format(maxH)
         if type(self.cropAspectRatio) is float:
             print "update height aspect"
-            maxW = self.imageWidth-50
-            w = min(h * self.cropAspectRatio,maxW)
-            self.updateSpinBox( self.ui.spinCropW, w )
-            h = min(w // self.cropAspectRatio,maxH)
-            self.updateSpinBox( self.ui.spinCropH, h )
+            w = h * self.cropAspectRatio
+            self.setSpinBox( self.ui.spinCropW, w )
         self.updateCropRect()
-
-    def updateCropX(self,x):
-        # called on change of size
-        w = self.ui.spinCropW.value()
-        maxX = self.imageWidth-50-w
-        self.ui.spinCropX.setRange( 25,maxX )
-        self.updateCropRect()   
-
-    def updateCropY(self,y):
-        # called on change of size
-        h = self.ui.spinCropH.value()
-        maxY = self.imageHeight-50-h
-        self.ui.spinCropY.setRange( 25,maxY )
-        self.updateCropRect()   
 
     def updateCropRect(self,val=0):
         # updates crop rectangle from UI, sets limits
         # updates offset to centre of perforation rectangle
-        maxW = self.imageWidth-50
-        maxH = self.imageHeight-50
-        w = self.ui.spinCropW.value()
-        h = self.ui.spinCropH.value()
-        self.ui.spinCropX.setRange( 25,maxW-w )
-        self.ui.spinCropW.setRange( 50,maxW )
-        self.ui.spinCropY.setRange( 25,maxH-h )
-        self.ui.spinCropH.setRange( 50,maxH )
-        x = self.ui.spinCropX.value()
-        y = self.ui.spinCropY.value()
-        if x+w > maxW:
-            x = max( maxW-w, 25 )
-            self.updateSpinBox( self.ui.spinCropX, x )
-        if y+h > maxH:
-            y = max( maxH-h, 25 )
-            self.updateSpinBox( self.ui.spinCropY, y )
-        self.scene.updateCrop( x,y,w,h )
-        self.cropPos = (x,y)
-        self.cropSize = (w,h)        
-        print("Crop: pos:{} size:{} maxW:{} maxH:{}".format(self.cropPos,self.cropSize,self.ui.spinCropW.maximum(),self.ui.spinCropH.maximum()) )
+        if not( self.imageTaken ):
+            # Dont need to do this until we have a preview image
+            return
+         # Set crop in the preview
+        self.scene.crop = ( self.ui.spinCropX.value(), 
+                            self.ui.spinCropY.value(),
+                            self.ui.spinCropW.value(),
+                            self.ui.spinCropH.value() )
 
+    def autoCrop(self):
+        # Calculate a crop size and position based on the size of the perforation
+        print "Auto crop rect"
+        if not( self.imageTaken ) and not( self.pf.found ):
+            # Dont need to do this until we have a preview image
+            return
+        x,y = self.pf.position
+        cx, cy = self.pf.centre
+        w,h = self.pf.expectedSize
+        cropH = int(h * self.pf.frameHeightMultiplier[self.filmType]*1.05)
+        cropW = int(w * self.pf.frameWidthMultiplier[self.filmType]*1.05)
+        # Work out the offset
+        cropX = w // 2
+        if self.filmType == 'super8':
+            cropY = 0 - cropH//2
+        else:
+            cropY = 0
+        self.setSpinBox( self.ui.spinCropX, cropX )
+        self.setSpinBox( self.ui.spinCropY, cropY )
+        self.setSpinBox( self.ui.spinCropW, cropW )
+        self.setSpinBox( self.ui.spinCropH, cropH )
+        self.updateCropRect()
+        
     @property
     def perforation(self):
         filmType = self.pf.filmType
@@ -694,23 +724,288 @@ class SetupJob( QtGui.QWidget ):
         self.pf.init( filmType, imageSize,expectedSize,int(cx) )
         print "expectedSize: {}".format(expectedSize)
         
-    def locatePerforation(self, pos ):
+    @property
+    def checkEdges(self):
+        if self.ui.radioTopBotEdge.isChecked():
+            return 0
+        elif self.ui.radioTopEdge.isChecked():
+            return 1
+        elif self.ui.radioBottomEdge.isChecked():
+            return 2
+    
+    @checkEdges.setter
+    def checkEdges(self,val):
+        if val==0:
+            self.ui.radioTopBotEdge.setChecked(True)
+        elif val==1:
+            self.ui.radioTopEdge.setChecked(True)
+        elif val==2:
+            self.ui.radioBottomEdge.setChecked(True)
+        self.pf.checkEdges = val
+    
+    @QtCore.Slot()
+    def setCheckEdges(self):
+        self.pf.checkEdges = self.checkEdges
+    
+    @property
+    def checkLeftEdge(self):
+        return self.ui.checkLeftEdge.isChecked()
+    
+    @checkLeftEdge.setter
+    def checkLeftEdge(self,val):
+        self.ui.checkLeftEdge.setChecked(val)
+        self.pf.checkLeftEdge = val
+
+    @QtCore.Slot()
+    def setLeftEdgeCheck(self):
+        self.pf.checkLeftEdge = self.checkLeftEdge
+            
+    def locateFirstPerforation(self, pos ):
         # Do an initial perforation find based on the supplied coordinates
         self.pf.findFirstFromCoords( self.previewImg, pos, 20 )
         if self.pf.found:
             x,y = self.pf.position
             w,h = self.pf.expectedSize
             # Now do a normal find
+            self.locatePerforation()
             self.pf.find( self.previewImg )
+            self.ui.toolPerforation.setEnabled( self.pf.found )
             if self.pf.found:
                 print "Perforation found: {} {}".format(self.pf.position,self.pf.expectedSize)
                 text = "<b>Perforation found</b><br><br>Centre: {} Size: {}".format(self.pf.position,self.pf.expectedSize)
             else:
                 text = "<b>Perforation not found</b><br><br>Try adjusting exposure and double clicking again in the centre of the perforation."
             self.ui.lblPerforationInfo.setText(text)
+
+
+
+    def locatePerforation(self):
+        # enable user interface to edit perforation
+        pf = self.pf
+        with Timer() as t:
+            pf.find( self.previewImg )
+        print "=> elasped perforation find: %s ms" % t.msecs
+        cx = self.pf.centre[0] if self.pf.found else self.pf.ROIcentrexy[0]
+        cy = self.pf.centre[1] if self.pf.found else self.pf.ROIcentrexy[1]
+        self.setSpinBoxRange( self.ui.spinCropX, 0-cx, self.imageWidth )
+        self.setSpinBoxRange( self.ui.spinCropY, 0-(cy*1.5), self.imageHeight )
+        if pf.found:
+            print "Perforation found: {} {} yDiff:{}".format(self.pf.position,self.pf.expectedSize,self.pf.yDiff)
+            text = "<b>Perforation found</b><br><br>Centre: {} Size: {}".format(self.pf.position,self.pf.expectedSize)
+            self.scene.roiRect = pf.ROIxy + pf.ROIwh
+            self.scene.perforationRect = pf.position + pf.expectedSize
+            self.updateCropRect()
+            self.scene.guidelinesBright = True
+            self.scene.guidelinesVisible = True
+            self.ui.btnAutoCrop.setEnabled(True)
+            self.ui.btnCalibrate.setEnabled(True)
             
-                    
+        else:
+            text = "<b>Perforation not found</b><br><br>Try adjusting exposure or film position."
+            self.scene.guidelinesBright = False
+            self.ui.btnAutoCrop.setEnabled(False)
+            self.ui.btnCalibrate.setEnabled(False)
+
+        self.ui.lblPerforationInfo.setText(text)
 
 
+    def nudgeFilmFwd( self ):
+        # Nudge film a few steps
+        print("Nudge forward")
+        self.tc.steps_forward(20)
+        self.finishedMovingFilm.emit()
+        
+    def nudgeFilmBack( self ):
+        print("Nudge backward")
+        self.tc.steps_back(20)
+        self.finishedMovingFilm.emit()
+        
+    @property
+    def transport(self):
+        stepsFwd = self._transport['stepsFwd']
+        stepsBack = self._transport['stepsBack'] 
+        pixelsPerStep = self._transport['pixelsPerStep']
+        return ( stepsFwd, stepsBack, pixelsPerStep )
+
+    @transport.setter
+    def transport(self,val):
+        stepsFwd, stepsBack, pixelsPerStep = val
+        self.stepsFwd = stepsFwd
+        self.stepsBack = stepsBack
+        self.pixelsPerStep = pixelsPerStep
+
+    @property
+    def stepsFwd(self):
+        return self._transport['stepsFwd']
+    
+    @stepsFwd.setter
+    def stepsFwd(self,val):
+        self._transport['stepsFwd'] = val
+        self.ui.lblStepsFrameFwd.setText( "{}".format(val) )
+
+    @property
+    def stepsBack(self):
+        return self._transport['stepsBack']
+    
+    @stepsBack.setter
+    def stepsBack(self,val):
+        self._transport['stepsBack'] = val
+        self.ui.lblStepsFrameBack.setText( "{}".format(val) )
+
+    @property
+    def pixelsPerStep(self):
+        return self._transport['pixelsPerStep']
+    
+    @pixelsPerStep.setter
+    def pixelsPerStep(self,val):
+        val = min(10, max(0.25,val) )
+        self._transport['pixelsPerStep'] = val
+        self.ui.lblStepsPixel.setText( "{:.2f}".format(val) )
 
 
+    def centreFrame(self, usePixelsPerStep=True):
+        # Attempt to centre the frame on the perforation 
+        # Get it within +/- 10 pixels of the centre
+        done = False
+        count = 10
+        print('Centering')
+        if usePixelsPerStep:
+            pixelsPerStep = self.pixelsPerStep
+        else:
+            pixelsPerStep = 8 # Assume a fairly safe value
+        while (count > 0) and not done:
+            count -= 1
+            img = self.camera.take_picture()
+            self.pf.find(img)
+            if self.pf.found:
+                stepsDiff = int( max(5,abs(self.pf.yDiff/pixelsPerStep)))
+                print( 'yDiff: {} stepsDiff: {}'.format( self.pf.yDiff, stepsDiff ) )
+                if self.pf.yDiff > 5:
+                    self.tc.steps_forward( stepsDiff )
+                elif self.pf.yDiff < -5:
+                    self.tc.steps_back( stepsDiff )
+                else:
+                    # Pretty close to the centre
+                    done = True
+            else:
+                # No perforation found so step forward a larger number 
+                # of steps to get a perforation into the ROI
+                self.tc.steps_forward( 60 )
+
+    def displayText( self, text, label=None ):
+        if label != None:
+            label.setText( 'Please wait...' )
+            print( text )
+            label.repaint()
+            QtGui.QApplication.processEvents()
+            time.sleep(0.005)
+
+    def stepsPerFrame(self,frames=18,d=True,label=None):
+        pf = self.pf
+        tc = self.tc
+        camera = self.camera
+        self.displayText( 'Please wait...', label )
+        tc.tension_film()
+        self.centreFrame( usePixelsPerStep=False )
+        if not pf.found:
+            self.displayText( "No perforation available", label )
+            return 0
+        longStep = 50
+        shortStep = 10
+        counts = []
+        steps = 0
+        # Get an estimate for a first frame
+        # move until perforation is no longer detected
+        while pf.found:
+            tc.steps_forward(longStep) if d else tc.steps_back(longStep)
+            steps += longStep
+            img = camera.take_picture()
+            pf.find( img )
+        # now move until we find perforation
+        while not pf.found:
+            tc.steps_forward(longStep) if d else tc.steps_back(longStep)
+            steps += longStep
+            img = camera.take_picture()
+            pf.find( img )
+        # Take short steps until it's close to the centre
+        if d:
+            while pf.yDiff > 0:
+                tc.steps_forward( shortStep )
+                steps += shortStep
+                img = camera.take_picture()
+                pf.find( img )
+        else:
+            while pf.yDiff < 0:
+                tc.steps_back( shortStep )
+                steps += shortStep
+                img = camera.take_picture()
+                pf.find( img )
+        counts.append( steps )
+        pixelsPerFrame = pf.expectedSize[1]*pf.frameHeightMultiplier[ pf.filmType ]
+        self.pixelsPerStep = pixelsPerFrame / steps
+        # Now refine over a number of frames
+        failures = 0
+        tc.tension_film()
+        while len(counts) < frames and failures < 3:
+            self.displayText( "{} of {}".format(len(counts),frames), label )
+            self.centreFrame()
+            tc.steps_forward( steps ) if d else tc.steps_back( steps )
+            img = camera.take_picture()
+            pf.find( img )
+            if pf.found:
+                correction = pf.yDiff / self.pixelsPerStep
+                if d:
+                    steps += correction 
+                else:
+                    steps -= correction
+                counts.append( steps )
+                print "**** framesteps:{}".format(steps)
+            else:
+                failures += 1
+                print "**** failed :-("
+        if failures < 3:
+            #aveSteps = int(round(sum(counts)/float(len(counts))))
+            aveSteps = np.median(counts)
+            print('Steps per frame:')
+            print('Ave steps over {} frames is {}'.format(len(counts),aveSteps))
+            print('Min:{} Max:{}'.format(min(counts),max(counts)))
+            print counts
+            return int( round(aveSteps) )
+        else:
+            return 0
+
+    def calibrateTransport(self):
+        # Calibrate the film transport over a number of frames
+        # This establishes how many motor steps are needed on average
+        # for a sequence of frames. d=True - move forwards, else move backward
+        pf = self.pf
+        self.ui.btnCalibrate.setEnabled(False)
+        #steps per frame forward
+        fwd = self.stepsPerFrame( frames=18, d=True, label=self.ui.lblStepsFrameFwd )
+        if fwd > 0: 
+            self.stepsFwd = fwd
+            # Refine steps per pixel
+            pixelsPerFrame = pf.expectedSize[1]*pf.frameHeightMultiplier[pf.filmType]
+            pxFwd = pixelsPerFrame / fwd
+            #steps per frame back
+            back = self.stepsPerFrame( frames=18, d=False, label=self.ui.lblStepsFrameBack )
+            if back > 0: 
+                self.stepsBack = back
+                pxBack = pixelsPerFrame / back
+                self.pixelsPerStep = (pxFwd + pxBack) / 2
+            else:
+                self.ui.lblStepsFrameBack.setText('Failed...')
+        else:
+            self.ui.lblStepsFrameFwd.setText('Failed...')
+ 
+        self.ui.btnCalibrate.setEnabled(True)
+        #self.centreFrame()
+        self.finishedMovingFilm.emit()
+
+    
+            
+    def stopAndCentre(self):
+        self.centreFrame()
+        self.finishedMovingFilm.emit()
+        
+    

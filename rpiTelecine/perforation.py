@@ -46,7 +46,9 @@
 
 from __future__ import division
 import numpy as np
+import cv2
 import scipy.ndimage.measurements as nd
+from timer import Timer
 
 # Types of film 
 filmTypes = ['super8', 'std8']
@@ -57,8 +59,7 @@ class TelecinePerforation():
     """
     filmType = ''
 
-    sizeMargin = 0.2	        # Margin around ROI - 0.2=20%
-    windowWidth = 0             # Width of window used to detect 
+    sizeMargin = 0.08	        # Variation in perforation size allowed
 
     isInitialised = False
 
@@ -68,52 +69,38 @@ class TelecinePerforation():
     ROIxy = ( 0,0 )             # Position of ROI in image
     ROIwh = ( 0,0 )             # Width and height of ROI
     ROIcentrexy = [ 0,0 ]       # Centre xy position of ROI in image
-    ROIthreshold = 0            # Threshold for sprocket detection
 
     # Used as temporary image holder when detecting perforation
     ROIimg = None
     
-    # If converting colour image, use green channel otherwise do greyscale conversion (slower)
-    ROIuseGreenChannel = True
-    
     # Updated when the find method is called
     found = False	# If last detection was successful
 
-    thresholdVal = 0.98 # 
-
     expectedSize = ( 0,0 )      # Expected size of perforation
     position = (0,0)
-    centre = (0,0)	# Centre of perforation
+    centre = (0,0)      # Centre of perforation
     yDiff = 0		# Difference between real and ideal position of perforation
 
     # Ranges of acceptable values for aspect ratio, height and width of the detected perforation
     aspectRange = ( 0.0, 0.0 )
     widthRange = ( 0,0 )
     heightRange = ( 0,0 )
+    threshold = 0.99    # Used for thresholding ROI image
     
     checkEdges = 0
     # 1 - Use top edge of perforation as reference
     # 2 - Use bottom edge only as reference
     # else use centre between detected top and bottom edges as reference
     checkLeftEdge = True
-    
+
     # Some useful information based on the mm dimensions from the film specifications
     perforationAspectRatio = {'super8':(0.91/1.14), 'std8':(1.8/1.23)} # Standard sizes in mm
 
     # Frame size in proportion to the perforation size
     # Can be used to automatically set a crop based on detected perforation size in pixels
-    frameHeightMultiplier = { 'super8':4.23/1.143, 'std8':3.81/1.23 }
-    frameWidthMultiplier = { 'super8':5.46/0.91, 'std8':4.5/1.8 }
+    frameHeightMultiplier = { 'super8':4.234/1.143, 'std8':3.81/1.23 }
+    frameWidthMultiplier = { 'super8':5.69/0.914, 'std8':4.5/1.8 }
 
-    useBGR = True # Use OpenCV BGR images for grey conversion
-
-    # Utility routines
-    def convert2grey(img):
-        # Return grayscale version of the image
-        if self.useBGR:
-            return np.dot(img[...,:3], [0.144, 0.587, 0.299]).astype(np.uint8)
-        else:
-            return np.dot(img[...,:3], [0.299, 0.587, 0.144]).astype(np.uint8)
 
     def init(self, filmType, imageSize, expectedSize, cx):
         # cx is the perforation film line
@@ -147,7 +134,6 @@ class TelecinePerforation():
             self.isInitialised = True
         else:
             self.expectedSize = (0,0)
-            self.ROIimg = None
             self.isInitialised = False
         self.setROI()
 
@@ -156,22 +142,22 @@ class TelecinePerforation():
         # If an expected perforation size is set, then ROI is based on size of perforation
         img_h,img_w = self.imageSize
         if self.isInitialised:
-            print "IS INITIALISED"
             # Already know expected size, so use smaller ROI
             # ROI height and position on Y axis
             # Top of ROI for initialised perforation detection
-            h = int(img_h/2)  # Use 1/2 of image height for ROI
+            h = int(img_h/3)  # Use 1/3 of image height for ROI
             if self.filmType == 'super8':
                 # Middle of image height
-                y = int(img_h/4)
+                y = (img_h//2) - (h//2)
             else:
                 # Standard 8 - top part of image
                 y = int(img_h/50)  # 39 pixels with 1944px high image
             # Base width on previously detected perforation - centre ib ROIcx
-            w = int((self.expectedSize[0] + (self.expectedSize[0]*self.sizeMargin))/2)
+            margin = self.expectedSize[0] // 3
+            w = (self.expectedSize[0] + margin)//2
             roiL = max(0, self.ROIcentrexy[0]-w)
             roiR = min(img_w, self.ROIcentrexy[0]+w)
-            self.ROIcentrexy = [ int(roiL+(roiR-roiL)/2), int(y+(h/2)) ]
+            self.ROIcentrexy = [ roiL+(roiR-roiL)//2, y+(h//2) ]
         else:
             # Not found before - so use larger area for detection
             # Use whole image height + half image width
@@ -184,27 +170,43 @@ class TelecinePerforation():
         self.ROIwh = ( roiR-roiL, h )
         self.ROIslice = np.index_exp[ y:y+h, roiL:roiR ]         # Create the slice object for making the ROI
         print("img: {} roiR: {} roiL: {} h: {}".format(self.imageSize, roiR,roiL,h))
-        self.ROIimg = np.zeros( (roiR-roiL, h), dtype=np.uint8)  # Initialise space for the ROI image 
-
-    def setROIimg(self,img):
-        # Sets the ROI image - converting to greyscale if necessary
-        if img.shape[:2] == self.imageSize:
-            # Expected image size OK
-            if len(img.shape)>2:
-                # Colour image, so convert it
-                if self.ROIuseGreenChannel:
-                    i = img[self.ROIslice]
-                    self.ROIimg = i[:,:,1]
-                else:
-                    # do 'proper' greyscale conversion
-                    self.ROIimg = self.convert2grey(img[self.ROIslice])
-            else:
-                # greyscale image already
-                self.ROIimg = img[self.ROIslice]
+        
+    def verticalMedian(self,img):
+        # Make a vertical section through the image and return an array with
+        # the median of each row
+        expectedW = self.expectedSize[0]
+        win = expectedW // 3
+        cx = self.ROIwh[0] // 2
+        start = cx-win
+        end = cx+win
+        if len(img.shape)>2:
+            # median value of each channel
+            a = np.mean( img[:,start:end],axis=2 )
+            # median value of each row to make a single column
+            v = np.median( a,axis=1 )
         else:
-            # We have an incorrect image size - this shouldn't happen
-            raise Exception('Image size incorrect. Expected: {} Received: {}'.format(self.imageSize,img.shape[:2]) )
-    
+            v =  np.median(img[:,start:end],axis=1)
+        print "vROI shape {}".format(v.shape)
+        return v
+
+    def horizontalMedian(self,img,cy):
+        # Make a horizontal section through the image and return an array with
+        # the median of each column
+        w,h = self.ROIwh
+        expectedH = self.expectedSize[1]
+        win = expectedH // 5
+        start = cy-win
+        end = cy+win
+        if len(img.shape)>2:
+            # median value of each channel
+            a = np.mean( img[start:end,:],axis=2 )
+            # median value of each column
+            h = np.median( a,axis=0 )
+        else:
+            h =  np.median(img[start:end,:],axis=0)
+            print "hROI shape {}".format(h.shape)
+        return h
+
     def cropToSlice( self, (x,y, w,h) ):
         # Returns a numpy slice from a list or tuple for extracting a crop from the image (x,y,w,h)
         x = max(x,0)
@@ -213,166 +215,178 @@ class TelecinePerforation():
         h = max(h,1)
         return np.index_exp[ y:y+h, x:x+w ]
 
+    def thresholdVal( self, img ):
+        #t = img.max() - 1
+        t = img.max() * self.threshold
+        #print "THRESH: {}".format(t)
+        return t
+
     def findFirstFromCoords( self, img, startPosition, windowWidth ):
-        # Find first perforation and its size from the starting position
-        self.isInitialised = False
-        self.found = False
+        with Timer() as t:
+            # Find first perforation and its size from the starting position
+            print("findFirstFromCoords")
+            self.isInitialised = False
+            self.found = False
 
-        self.imageSize = img.shape[:2]
-        self.setROI()
-        self.setROIimg(img)
- 
-        xStart = startPosition[0]
-        yStart = startPosition[1]
+            self.imageSize = img.shape[:2]
+            self.setROI()
+            img = img[self.ROIslice]
+            xStart, yStart = startPosition
+            win = windowWidth//2
+            vStart = xStart-win
+            vEnd = xStart+win
+            hStart = yStart-win
+            hEnd = yStart+win
 
-        win = windowWidth//2
-
-        #take a vertical section of pixels from the ROI and threshold it
-        vROI = self.ROIimg[:,xStart-win:xStart+win]
-        threshVal = int(vROI.max()*self.thresholdVal)
-
-        #Make a single pixel wide strip, with the median of all the rows - and threshold it
-        vROI = np.median(vROI,axis=1) < threshVal
-
-        # And horizontal...
-        hROI = self.ROIimg[yStart-win:yStart+win,:]
-        
-        #Make a single pixel wide strip, with the median of all the columns - and threshold it
-        hROI = np.median(hROI,axis=0) < threshVal
-
-        # Check if centre section is clear of data
-        if hROI[xStart-win:xStart+win].any() or vROI[yStart-win:yStart+win].any():
-            print( "Image data, so can't locate perforation at: {}".format(startPosition) )
-        else:
-            x,y = self.ROIxy
-            w,h = self.ROIwh
-            # Now to find the edges
-            bot   = vROI[yStart:].argmax()
-            bot   = yStart+bot if bot>0 else h
-
-            vROI = vROI[:yStart]
-            top   = vROI[::-1].argmax()
-            top   = yStart-top if top>0 else 0
-
-            right = hROI[xStart:].argmax()
-            right   = xStart+right if right>0 else w
-
-            hROI = hROI[:xStart]
-            left  = hROI[::-1].argmax() 
-            left  = xStart-left if left>0 else 0
-
-            # Sanity check the aspect ratio of detection
-            w = right-left
-            h = bot-top
-            aspect = float(w) / float(h)
-            if self.aspectRange[0] <= aspect <= self.aspectRange[1]:
-                # Aspect Ratio of found perforation is OK - save information
-                self.setPerforationSize( (w,h) )
-                self.setPerfPosition( x+left+((right-left)/2), y+top+(h/2) )
-                self.windowWidth = w - (w*self.sizeMargin*2)
-                self.isInitialised = True
-                # Now adjust ROI to match found perforation
-                self.ROIcentrexy[0] = self.centre[0]
-                self.setROI()
-                self.found = True
+            if len(img.shape)>2:
+                # median value of each channel
+                a = np.median( img[:,vStart:vEnd],axis=2 )
+                b = np.median( img[hStart:hEnd,:],axis=2 )
+                # median value of each row to make a single column
+                v = np.median( a,axis=1 )
+                h = np.median( b,axis=0 )
             else:
-                print( "Perforation aspect {} ratio NOT OK - detection failed. Range: {}".format(aspect,self.aspectRange) )
+                v =  np.median(img[:,vStart:vEnd],axis=1)
+                h =  np.median(img[hStart:hEnd,:],axis=0)
+            print "vROI shape {}".format(v.shape)
+            print "hROI shape {}".format(h.shape)
+            threshVal = self.thresholdVal( v )
 
+            #Threshold the vertical strip
+            vROI = v < threshVal
+            hROI = h < threshVal
+
+            # Check if centre section is clear of data
+            if hROI[vStart:vEnd].any() or vROI[hStart:hEnd].any():
+                print( "Image data, so can't locate perforation at: {}".format(startPosition) )
+            else:
+                x,y = self.ROIxy
+                w,h = self.ROIwh
+                # Now to find the edges
+                bot   = vROI[yStart:].argmax()
+                bot   = yStart+bot if bot>0 else h
+
+                vROI = vROI[:yStart]
+                top   = vROI[::-1].argmax()
+                top   = yStart-top if top>0 else 0
+
+                right = hROI[xStart:].argmax()
+                right   = xStart+right if right>0 else w
+
+                hROI = hROI[:xStart]
+                left  = hROI[::-1].argmax() 
+                left  = xStart-left if left>0 else 0
+                print("top {}  bot {}  left {}  right {}".format(top,bot,left,right))
+                # Sanity check the aspect ratio of detection
+                w = right-left
+                h = bot-top
+                aspect = w / float(h)
+                if self.aspectRange[0] <= aspect <= self.aspectRange[1]:
+                    # Aspect Ratio of found perforation is OK - save information
+                    self.isInitialised = True
+                    cx = x+left+((right-left)//2)
+                    cy =  y+top+(h//2)
+                    self.centre = (cx,cy)
+                    self.ROIcentrexy[0] = cx
+                    self.yDiff = cy - self.ROIcentrexy[1]
+                    self.setPerforationSize( (w,h) )
+                    self.found = True
+                    print("SUCCESS")
+                else:
+                    print( "Perforation aspect {} ratio NOT OK - detection failed. Range: {}".format(aspect,self.aspectRange) )
+        print "=> elasped settimg new perforation: %s ms" % t.msecs
+            
+        
     def setPerfPosition(self,cx,cy):
         # Sets the perforation position based on the centre
         self.centre = ( int(cx), int(cy) )
         self.position = ( int(cx-self.expectedSize[0]/2),int(cy-self.expectedSize[1]/2) )
         self.yDiff = int(self.centre[1]-self.ROIcentrexy[1])
 
-    def findVertical(self, img):
+    def findVertical(self):
         # Used for subsequent captures where we know the expected size and 
-        # approximate horizontal position of perforation
-
+        # approximate position of perforation
+        print( "findVertical" )
         self.found = False
-        self.setROIimg(img)
-
-        expectedW, expectedH = self.expectedSize
-
-        xStart = self.ROIwh[0]//2
-        #xStart = self.centre[0]-ROIxy[0]
-        yStart = self.ROIcentrexy[1]-self.ROIxy[1]
-        win = (expectedW - (expectedW*self.sizeMargin) )//2 
-
-        vROI = self.ROIimg[:,xStart-win:xStart+win]
-        threshVal = int(vROI.max() * self.thresholdVal)
-
-        vROI = np.median(vROI,axis=1) < threshVal
-        #print "FindVertical: vROI"
-        #print "shape: {}".format(vROI.shape)
-
         x,y = self.ROIxy
         w,h = self.ROIwh
-        # Now to find the edges
-        bot   = vROI[yStart:].argmax()
-        #print("bot:{}".format(bot))
-        #print vROI[yStart:]
-        bot   = yStart+bot if bot>0 else h
-
-        vROI = vROI[:yStart]
-        top   = vROI[::-1].argmax()
-        #print("top:{}".format(top))
-        #print vROI[::-1]
-        top   = yStart-top if top>0 else 0
-  
-        if self.checkEdges==1:
-            # use top edge as reference and extrapolate bottom edge
-            bot = top+expectedH
-        elif self.checkEdges==2:
-            # use bottom edge as reference
-            top = bot-expectedH
-        # Check if detected is close to correct aspect ratio of perforation
-        aspect =  float(expectedW) / float(bot-top)
-        if self.aspectRange[0] <= aspect <= self.aspectRange[1]:
-            # Aspect Ratio of found perforation is OK - save information
-            #print( "Aspect ratio OK" )
-            x,y = self.ROIxy
-            self.setPerfPosition( x + xStart, y + top + ((bot-top)/2) )
-            self.found = True
+        expectedW, expectedH = self.expectedSize
+        xStart = w // 2
+        yStart = self.ROIcentrexy[1]-y
+        vwin = expectedH // 4
+        threshold = self.thresholdVal( self.vROImedian )
+        self.vROIthresh = self.vROImedian < threshold
+        # Check if centre section is clear of data
+        if self.vROIthresh[yStart-vwin:yStart+vwin].any():
+            # Image data in centre area
+            print "Image data in window"
         else:
-            print( "Perforation aspect {} ratio NOT OK - detection failed. Range: {}".format(aspect,self.aspectRange) )
+            # Now to find the edges
+            bot   = self.vROIthresh[yStart:].argmax()
+            bot   = yStart+bot if bot>0 else h
+            vROI = self.vROIthresh[:yStart]
+            top   = vROI[::-1].argmax()
+            top   = yStart-top if top>0 else 0
+            # Check if detected is close to correct aspect ratio of perforation
+            aspect =  float(expectedW) / float(bot-top)
+            if self.aspectRange[0] <= aspect <= self.aspectRange[1]:
+                if self.checkEdges==1:
+                    # use top edge as reference and extrapolate bottom edge
+                    bot = top+expectedH
+                elif self.checkEdges==2:
+                    # use bottom edge as reference
+                    top = bot-expectedH                
+                self.setPerfPosition( x + xStart, y + top + ((bot-top)//2) )
+                self.found = True
+            else:
+                print( "Perforation aspect {} ratio NOT OK - detection failed. Range: {}".format(aspect,self.aspectRange) )
         if not(self.found):
-            # Try alternative method
+            # Try alternative method 
             self.findVerticalAlternative()
 
+    
     def findVerticalAlternative(self):
         # This is an alternative method, a bit more expensive
-        # than the first version, and is called on failure of
+        # than findVertical, and is called on failure of
         # the previous findVertical. It uses Scipy labelling to segment the a strip 
         # of data from the ROI
+        print( "findVerticalAlternative" )
         self.found = False
         cx = self.ROIwh[0]//2
         expectedW, expectedH = self.expectedSize
 
-        win = (expectedW - (expectedW*self.sizeMargin) )//2 
-        #take a vertical section of pixels from the ROI and threshold it
-        vROI = self.ROIimg[:,cx-win:cx+win]
-
-        #Make a single pixel wide strip, with the median of all the rows 
-        vROI = np.median(vROI,axis=1)
-        threshVal = int(vROI.max() * self.thresholdVal)
-        vROIthres = vROI >= threshVal
         candidate = None
-        if vROIthres.min() != vROIthres.max(): 
+        if self.vROIthresh.min() != self.vROIthresh.max(): 
             # Prevent a divide by zero because roi is all the same value. 
             # e.g. we have a frame completely white or black
-            lbl,numLbl = nd.label(vROIthres)
+            lbl,numLbl = nd.label(np.invert(self.vROIthresh))
             obj = nd.find_objects(lbl)
             brightest = 0
             for s in obj:
-                print s
                 # s is an np.slice object
-                sBright = np.mean(vROI[s]) 
-                sHeight = s[0].stop - s[0].start
-                if (self.heightRange[0] <= sHeight <= self.heightRange[1]) and sBright > brightest:
-                    candidate = s[0]
+                sBright = np.mean(self.vROImedian[s])
+                #print s,sBright
+                if sBright > brightest:
+                    # Brightest area - if we get a brighter area after
+                    # finding a potential candidate, reset the candidate
+                    # to prevent false detection
                     brightest = sBright
+                    candidate = None
+                sHeight = s[0].stop - s[0].start
+                if (self.heightRange[0] <= sHeight <= self.heightRange[1]) and sBright == brightest:
+                    # Correct height and brightest
+                    candidate = s[0]
         if candidate:
-            self.setPerfPosition( self.ROIcentrexy[0], self.ROIxy[1]+candidate.start + ((candidate.stop-candidate.start)/2 )) 
+            x,y = self.ROIxy
+            top = y+candidate.start
+            bot = y+candidate.stop
+            if self.checkEdges==1:
+                # use top edge as reference and extrapolate bottom edge
+                bot = top+expectedH
+            elif self.checkEdges==2:
+                # use bottom edge as reference
+                top = bot-expectedH
+            self.setPerfPosition( x + cx, top + ((bot-top)//2) )
             self.found = True
 
     def findLeftEdge(self):
@@ -382,27 +396,17 @@ class TelecinePerforation():
         # after finding the vertical position. The left edge is used
         # as the right may be overwhelmed with a bright image.
         # It uses the same ROI image created in findVertical
+        print("findLeftEdge")
         if self.found:
+            xStart = self.centre[0]-self.ROIxy[0]
+            hROI = self.hROImedian[:xStart]
             # Horizontal section, and threshold
-
-            expectedW, expectedH = self.expectedSize
-
-            win = (expectedH - (expectedH*self.sizeMargin) )//2 
-
-            #Centre of current perforation
-            centre = (self.centre[0]-self.ROIxy[0], self.centre[1]-self.ROIxy[1] )
-            # Horizontal strip of pixels of ROI up to centre of perforation
-            hROI = self.ROIimg[ centre[1]-win:centre[1]+win, :centre[0] ]
-
-            threshVal = int(hROI.max() * self.thresholdVal)
-
+            threshVal = self.thresholdVal(hROI)
             #Make a single pixel wide strip, with the median of all the columns - and threshold it
-            hROI = np.median(hROI, axis=0) < threshVal
-
+            hROIthresh = hROI < threshVal
             # Position of edge of perforation
-            left  = hROI[::-1].argmax() 
-            left  = centre[0]-left if left>0 else 0
-
+            left  = hROIthresh[::-1].argmax() 
+            left  = xStart-left if left>0 else 0
             self.position = ( left + self.ROIxy[0], self.position[1] )
             self.centre = (left + (self.expectedSize[0]//2) + self.ROIxy[0], self.centre[1] )
         else:
@@ -411,8 +415,11 @@ class TelecinePerforation():
     def find(self,img):
         # Find perforation position in the image
         if self.isInitialised:
-            self.findVertical(img)
+            self.vROImedian = self.verticalMedian(img[self.ROIslice])
+            self.findVertical()
             if self.found and self.checkLeftEdge:
+                cy = self.centre[1]-self.ROIxy[1]
+                self.hROImedian = self.horizontalMedian( img[self.ROIslice], cy )
                 self.findLeftEdge()
         else:
             # We haven't initialised or run findFirstFromCoords 

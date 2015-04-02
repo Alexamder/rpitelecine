@@ -182,6 +182,8 @@ class ControlMainWindow(QtGui.QMainWindow):
         perf_w = int(settings.value("perf_w", 0) )
         perf_h = int(settings.value("perf_h", 0) )
         self.setupJob.perforation = ( film_type, perf_cx, perf_w, perf_h )
+        self.setupJob.checkEdges = int(settings.value("check_edges",0))
+        self.setupJob.checkLeftEdge = isTrue(settings.value("check_left_edge",0))
         settings.endGroup()
 
         settings.beginGroup( "transport" )
@@ -227,6 +229,8 @@ class ControlMainWindow(QtGui.QMainWindow):
             settings.setValue("perf_cx", perf_cx)
             settings.setValue("perf_w", perf_w)
             settings.setValue("perf_h", perf_h)
+            settings.setValue("check_edges", self.setupJob.checkEdges)
+            settings.setValue("check_left_edge", self.setupJob.checkLeftEdge)
             settings.endGroup()
 
             settings.beginGroup( "transport" )

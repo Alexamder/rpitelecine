@@ -39,12 +39,17 @@ from rpiTelecine.camera import (
 
 from rpiTelecine.control import (
     TelecineControl,
+    StepperMotor,
+    ReelMotor,
+    LedControl,
     )
 
 from rpiTelecine.perforation import (
     TelecinePerforation,
     filmTypes,
     )
+
+from rpiTelecine.timer import Timer
 
 import rpiTelecine.guiPreview
 
