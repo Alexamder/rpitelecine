@@ -42,6 +42,7 @@ from rpiTelecine.control import (
     StepperMotor,
     ReelMotor,
     LedControl,
+    ShutterRelease,
     )
 
 from rpiTelecine.perforation import (
