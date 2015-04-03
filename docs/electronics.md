@@ -1,12 +1,41 @@
 # RPi Telecine Electronics
 
-## The PCB
+## The new PCB
+
+The new controller PCB is designed be more compact, is based on the Pi HAT layout
+and connects directly to the 40 way expansion header on a V2 Raspberry PI or Model
+B+. It extends behind the Pi to allow for the stepper motor drivers.
+
+It is very similar in function to the previous board, but there are a few differences:
+
+* 5V regulator is based on a Texas Instruments TPS5430 switching regulator. More compact than the 5V module on the old PCB
+* Up to 4 stepper motor drivers using inexpensive Polulu or Stepstick type A4988 or DRV8825 modules
+* DIP switches to set microstepping control pins on driver boards
+* SOIC MCP23S17 IO expander. The SMD chip is much smaller than the DIP version, and SOIC isn't too tricky to hand-solder
+* Optional jumpers to set address of MCP23S17
+* Only one XPPower LED driver module. Decided that a high CRI LED is pretty good, and saves the light mixing problem.
+
+It's also designed to be generic enough to be used as a timelapse or panoramic
+mount controller, so I've kept the opto-couplers to allow for triggering an
+SLR or other camera, although it's not used for this telecine project.
+
+Aside from the SOIC chips, MOSFETS and a diode in the 5V regulator circuit, all 
+components are through-hole. The surface mount items are selected for easy hand-soldering.
+
+![New PCB in Kicad](../images/pcb2-kicad.png)
+
+## The old PCB
+
+The old PCB is 10cm x 10cm, and is designed to connect to the Pi with a ribbon 
+cable. It might be possible to connect it directly to the Pi - but a spacer 
+may be required to clear the Pi's ethernet port, and allow space for the camera 
+ribbon cable.
 
 The PCB design is pretty simple and comprises the following sections:
 
 * 12V input
 * Connectors for 5V regulator for Raspberry Pi and DC motors
-* MCP23S17 12 bit IO chip connected to Raspberry Pi SPI port
+* MCP23S17 16 channel IO chip connected to Raspberry Pi SPI port
 * 2 x XPPower LED Driver modules + filter and control voltage circuitry
 * Headers for 2 x Big Easy Driver stepper motor controllers
 * Optically isolated shutter release for external camera
@@ -15,11 +44,6 @@ The PCB design is pretty simple and comprises the following sections:
 * Headers for toggle switches for power to LEDs + Stepper motors
 * Headers for 2x power LEDs, 2x DC motors, 2x 4wire stepper motors
 * 26way header for Raspberry Pi GPIO port
-
-The PCB is 10cm x 10cm, and is designed to connect to the Pi with a ribbon 
-cable. It might be possible to connect it directly to the Pi - but a spacer 
-may be required to clear the Pi's ethernet port, and allow space for the camera 
-ribbon cable.
 
 ![PCB overview](../images/annotated-pcb.png)
 

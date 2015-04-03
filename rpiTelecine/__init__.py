@@ -58,6 +58,8 @@ import rpiTelecine.guiSetupJob
 
 import rpiTelecine.guiCommon
 
+import rpiTelecine.guiControl
+
 import rpiTelecine.ui
 
 

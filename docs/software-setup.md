@@ -5,7 +5,12 @@ telecine hardware. I am currently using a Raspberry Pi B version 2 - as the tele
 processing really benefits from additional memory and the extra processor cores.
 These instructions were tested using NOOBS 1.4.0 released on 18 February 2015.
 A main prerequisite is the Python-picamera library, which is installed by default with
-the current version of Raspbian. Other prerequisites are WiringPi2, WiringPi2-Python and OpenCV.
+the current version of Raspbian. 
+Other prerequisites are WiringPi2, WiringPi2-Python and OpenCV, and PySide for the GUI.
+
+There isn't yet an installable package - just clone the Github repository into 
+the home folder on the Pi. Instructions below. It's probably a good idea to make
+make a fresh SD card with the latest NOOBS from the Raspberry Pi web site.
 
 ## Download and install NOOBS
 
@@ -26,7 +31,7 @@ $ sudo raspi-config
 
 The rest of the settings are in the Advanced section:
 
-* A3 Memory Split - Set to 192MB. For full resolution stills, Python picamera requires the GPU to have more RAM than the default
+* A3 Memory Split - Set to at least 192MB. For full resolution stills, Python picamera requires the GPU to have more RAM than the default
 * A4 SSH - Enable SSH if you use SSH to connect to the Pi, or to transfer files from it
 * A6 SPI - Enable SPI, and set the kernel module to load by default
 
@@ -38,14 +43,18 @@ Plug in a network cable, or set up the wireless network adapter.
 For the latter, the easiest way is to go into LXDE with 'startx' and click Menu->Preferences->WiFi Configuration
 
 ## Update and install packages
+Packages like python-picamera and python-numpy are already installed on a basic NOOBS install.
+
 Python-dev and python-setuptools are used to install wiringPi2; OpenCV is used in the rpiTelecine scripts 
-to provide a rudimentary GUI and image saving capability, and Scipy is used for some simple image analysis.
+to provide some image processing and image saving capability, Scipy is used for image analysis, and
+PySide provides a Qt based GUI.
 
 ```
 $ sudo apt-get update
 $ sudo apt-get upgrade
 $ sudo apt-get install python-dev python-setuptools 
 $ sudo apt-get install libopencv-dev python-opencv python-scipy
+$ sudo apt-get install python-pyside
 ```
 
 ## Install WiringPi2 and WiringPi2-Python
@@ -67,4 +76,5 @@ $ cd
 $ git clone https://github.com/jas8mm/rpiTelecine.git
 $ cd rpiTelecine
 ```
+
 

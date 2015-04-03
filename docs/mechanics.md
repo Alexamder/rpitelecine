@@ -11,6 +11,11 @@ Pibow case is attached to the front beam with long steel M3 screws in place
 of the standard nylon ones. A long camera ribbon cable goes from the Pi to the
 camera.
 
+It is anticipated that a future version will be based on a laser-cut chassis,
+which will simplify construction, and make it easier to have a straighter film
+path from the film rollers through the gate. I am also experimenting with a laser
+cut light-box and LED mount, and swing-arms for the pinch rollers.
+
 ## 3d printed parts
 
 Various parts in the telecine were 3d printed. A fair amount of precision is required for the 
@@ -56,6 +61,9 @@ keeping alignment straight.
 3d printed lightbox, gate and camera/lens-mount in situ
 
 ## Hacked servos
+
+An option for the film spool tables are simple DC geared motors made by hacking out
+the control electronics from standard servos.
 
 The film spool tables are attached directly to the splines of the servos. The servos
 are standard inexpensive TowerPro MG995s (or copies), but modded for continuous
