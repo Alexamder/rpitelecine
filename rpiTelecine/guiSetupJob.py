@@ -44,56 +44,45 @@ from PySide import QtCore, QtGui
 from rpiTelecine.ui.setupJob import *
 import rpiTelecine.guiCommon as guiCommon
 
-class CameraPreviewUpdater(QtCore.QThread):
+class CameraPreviewUpdater(QtCore.QObject):
     # Thread to update camera preview image
     # It will take a picture immediate on a call to takePicture
     # or after 3/4 second after calling updatePicture
     # to allow for updates in the UI before taking picture
     pictureReady = QtCore.Signal(np.ndarray)
-    timer = QtCore.QTimer()
-    mutex = QtCore.QMutex()
+    qImageReady = QtCore.Signal(QtGui.QImage)
     delay = 750
     exiting = False
-    ready = False
     active = True
 
-    def __init__(self,camera,parent = None):
-        super(CameraPreviewUpdater, self).__init__(parent)
+    def __init__(self,camera):
+        super(CameraPreviewUpdater, self).__init__()
         self.camera=camera
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.takePicture)
 
+    @QtCore.Slot()
     def takePicture(self):
-        self.ready=True
-        
-    def updatePicture(self):
-        self.ready = False
-        self.timer.stop()
-        self.timer.start(self.delay)
+        print "takePicture slot"
+        if self.active:
+            print "Taking picture"
+            img = self.camera.take_picture()
+            print("Picture shape: {}".format(img.shape))
+            self.pictureReady.emit(img)
+            self.qi = guiCommon.makeQimage(img)
+            self.qImageReady.emit(self.qi)
+
 
     def run(self):
         while not self.exiting:
-            if self.active and self.ready:
-                print "Taking picture"
-                self.ready = False
-                img = self.camera.take_picture()
-                self.mutex.lock()
-                print("Picture shape: {}".format(img.shape))
-                self.mutex.unlock()
-                print "Picture taken"
-                self.pictureReady.emit(img)
-            else:
-                # Needed to keep UI responsive
-                QtCore.QThread.msleep(50)
+            # Needed to keep UI responsive
+            time.sleep(0.15)
 
+    @QtCore.Slot(bool)
     def pause(self, p=True):
         self.active = not(p)
 
+    @QtCore.Slot()
     def stop(self):
-        self.mutex.lock()
         self.exiting = True
-        self.mutex.unlock()
-        self.wait()
 
 #*******************************************************************************
 
@@ -278,7 +267,6 @@ class PreviewScene( QtGui.QGraphicsScene ):
     def histCropProportion(self):
         return self._histCropProportion
 
-
     def updateHistArea(self,val):
         self.histRectProportion = float(val) / 100
         self.updateHistRect()
@@ -347,13 +335,15 @@ class SetupJob( QtGui.QWidget ):
     filmTypeChanged = QtCore.Signal(str) # Emits new film type
     jobNameChanged = QtCore.Signal(str) # Emits a change of job name
     outputDirectoryChanged = QtCore.Signal(str) # Emits new output dir name
-    finishedMovingFilm = QtCore.Signal() # finished moving film transport
 
-    _transport = { 'stepsFwd':0, 'stepsBack':0, 'pixelsPerStep':0 }
+    _transport = { 'stepsPerFrame':0, 'pixelsPerStep':0 }
 
     cropAspectRatio = None
     
     imageTaken = False # Prevents stuff happening before we have a picture
+    previewUpdaterThread = QtCore.QThread()
+    previewUpdateTimer = QtCore.QTimer()
+    updateDelay = 500
 
     def __init__(self,camera,tc,pf,parent=None):
         super(SetupJob, self).__init__(parent)
@@ -371,20 +361,20 @@ class SetupJob( QtGui.QWidget ):
         self.statusbar = parent.ui.statusbar
 
         self.scene = PreviewScene()
-        
+
         # Set up preview with blank image
         self.imageWidth, self.imageHeight = w,h = 1024,800
         self.previewImg = np.zeros( (h,w,3), dtype=np.uint8 )
         self.clippedImg = np.zeros( (h,w,3), dtype=np.uint8 )
         self.previewQimg = guiCommon.makeQimage(self.previewImg)
         self.scene.setSceneRect(0, 0, w, h)
-        
+
         # Timer used so we don't constantly update histogram
         self.histogramTimer = QtCore.QTimer()
         self.histogramTimer.setSingleShot(True)
         self.histogramTimer.timeout.connect(self.makeHistogram)
         self.scene.histRectChanged.connect( self.makeHistogramDelayed )
-        
+
         # Preview Window
         self.view = PreviewView(self.scene)
         self.ui.layoutPreview.insertWidget(0,self.view)
@@ -392,7 +382,6 @@ class SetupJob( QtGui.QWidget ):
         self.ui.btnZoomIn.clicked.connect( self.view.zoomIn )
         self.ui.btnZoomOut.clicked.connect( self.view.zoomOut )
         self.ui.btnFit.clicked.connect( self.view.fitToWindow )
-       
 
         # Job Setup tab
         self.ui.btnChangeJobName.clicked.connect(self.changeJobName)
@@ -401,6 +390,10 @@ class SetupJob( QtGui.QWidget ):
         self.ui.spinShutter.valueChanged.connect( self.updateCameraShutterSpeed )
         self.ui.spinGainR.valueChanged.connect( self.updateCameraGains )
         self.ui.spinGainB.valueChanged.connect( self.updateCameraGains )
+        self.ui.spinSharpness.valueChanged.connect( self.updateCameraSharpness )
+        self.ui.spinContrast.valueChanged.connect( self.updateCameraContrast )
+        self.ui.spinSaturation.valueChanged.connect( self.updateCameraSaturation )
+        
         self.ui.chkShowClipped.stateChanged.connect( self.makeClippedImage )
 
         # Crop toolbox disabled until we have first image
@@ -411,36 +404,61 @@ class SetupJob( QtGui.QWidget ):
         self.ui.cmbAspectFix.currentIndexChanged.connect( self.setAspectRatio )
 
         # Preview updater thread
-        self.previewUpdater = CameraPreviewUpdater(self.camera,parent)
-        self.previewUpdater.pictureReady.connect(self.updatePicture)
-        self.previewUpdater.start()
-        
+        self.previewUpdater = CameraPreviewUpdater(self.camera)
+        self.previewUpdater.moveToThread(self.previewUpdaterThread)
+        self.previewUpdaterThread.started.connect(self.previewUpdater.run)
+        self.previewUpdater.pictureReady.connect(self.newPicture)
+        self.previewUpdater.qImageReady.connect(self.newQimage)
+        self.previewUpdaterThread.start()
+
+        # Preview update timer
+        # Delays taking picture if we're updating settings or moving too quickly
+        self.previewTimer = QtCore.QTimer()
+        self.previewTimer.setSingleShot(True)
+        self.previewTimer.timeout.connect(self.previewUpdater.takePicture)
+
         # Perforation checking options
         self.ui.radioTopEdge.toggled.connect(self.setCheckEdges)
         self.ui.radioBottomEdge.toggled.connect(self.setCheckEdges)
         self.ui.radioTopEdge.toggled.connect(self.setCheckEdges)
         self.ui.checkLeftEdge.stateChanged.connect(self.setLeftEdgeCheck)
-        
+
         # Transport
         self.ui.btnStop.clicked.connect( self.stopAndCentre )
-        self.ui.btnNudgeU.clicked.connect( self.nudgeFilmFwd )
-        self.ui.btnNudgeD.clicked.connect( self.nudgeFilmBack )
-        
+        self.ui.btnFwdSingle.clicked.connect( lambda: self.jumpForward(1) )
+        self.ui.btnBackSingle.clicked.connect( lambda: self.jumpBack(1) )
+        self.ui.btnFwdsShort.clicked.connect( lambda: self.jumpForward(self.ui.spinShortJump.value()) )
+        self.ui.btnBackShort.clicked.connect( lambda: self.jumpBack(self.ui.spinShortJump.value()) )
+        self.ui.btnFwdsLong.clicked.connect( lambda: self.jumpForward(self.ui.spinLongJump.value()) )
+        self.ui.btnBackLong.clicked.connect( lambda: self.jumpBack(self.ui.spinLongJump.value()) )
+        self.ui.btnNudgeU.clicked.connect( lambda: self.tc.stepForward(20) )
+        self.ui.btnNudgeD.clicked.connect( lambda: self.tc.stepBackward(20) )
+         
         # Update or initialise perforation detection
         self.scene.doubleClicked.connect( self.locateFirstPerforation )
         
         # Film Transport
-        self.finishedMovingFilm.connect( self.previewUpdater.updatePicture )
-        self.transport = (285,285,3.5)
+        self.tc.finishedStepping.connect( self.stopAndCentre )
+        self.transport = (300.0,3.5)
         self.ui.btnCalibrate.clicked.connect( self.calibrateTransport )
 
     def close(self):
         # Need to gracefully stop the preview update
         print "Exiting preview"
         self.previewUpdater.stop()
+        self.previewUpdaterThread.exit()
+        self.previewUpdaterThread.wait()
 
     def pauseUpdating(self,p=True):
         self.previewUpdater.pause(p)
+        
+        
+    @QtCore.Slot()
+    def updatePicture(self):
+        # Reset timer - to prevent constant calls to take a picture
+        # when we're messing with the settings
+        self.previewTimer.stop()
+        self.previewTimer.start(self.updateDelay)
 
     def changeJobName(self):
         # Uses input dialog to get job name from user
@@ -491,16 +509,48 @@ class SetupJob( QtGui.QWidget ):
             self.pf.init( f, imageSize=self.camera.resolution, expectedSize=(0,0), cx=0 )
             self.filmTypeChanged.emit(f)
 
-    def updateCameraShutterSpeed(self):
+    @QtCore.Slot(int)
+    def updateCameraShutterSpeed(self,val):
         # Called when using the spinbox
-        self.camera.shutter_speed = int(self.ui.spinShutter.value())
-        self.previewUpdater.updatePicture()
+        self.camera.shutter_speed = int(val)
+        self.updatePicture()
 
-    def updateCameraGains(self):
+    @QtCore.Slot(int)
+    def updateCameraGains(self,val):
         awb_gains = ( float(self.ui.spinGainR.value()),
                       float(self.ui.spinGainB.value()) )
         self.camera.awb_gains = awb_gains
-        self.previewUpdater.updatePicture()
+        self.updatePicture()
+
+    def setCameraSharpness( self,val ):
+        self.camera.sharpness = int(val)
+        self.ui.spinSharpness.setValue( val )
+
+    @QtCore.Slot(int)
+    def updateCameraSharpness(self,val):
+        # Called when using the spinbox
+        self.camera.sharpness = int(val)
+        self.updatePicture()
+
+    def setCameraSaturation( self,val ):
+        self.camera.saturation = int(val)
+        self.ui.spinSaturation.setValue( val )
+
+    @QtCore.Slot(int)
+    def updateCameraSaturation(self,val):
+        # Called when using the spinbox
+        self.camera.saturation = int(val)
+        self.updatePicture()
+
+    def setCameraContrast( self,val ):
+        self.camera.contrast = int(val)
+        self.ui.spinContrast.setValue( val )
+
+    @QtCore.Slot(int)
+    def updateCameraContrast(self,val):
+        # Called when using the spinbox
+        self.camera.contrast = int(val)
+        self.updatePicture()
 
     def setCameraExposure(self,shutter,gain_r,gain_b):
         self.camera.setup_cam( shutter = int(shutter), 
@@ -552,7 +602,7 @@ class SetupJob( QtGui.QWidget ):
         self.ui.btnAutoCrop.clicked.connect( self.autoCrop )
 
     @QtCore.Slot(np.ndarray)
-    def updatePicture(self,img):
+    def newPicture(self,img):
         # Updates the preview image and histogram
         print("Updating picture {}".format(id(img)))
         # keep preview image around to be able to recreate histogram
@@ -566,12 +616,15 @@ class SetupJob( QtGui.QWidget ):
             self.setSpinBoxRange( self.ui.spinCropH, 200, self.imageHeight )
 
         print( 0,0,self.imageWidth,self.imageHeight )
-        self.previewQimg = guiCommon.makeQimage(img)
+
+    @QtCore.Slot(QtGui.QImage)
+    def newQimage(self,qi):
+        self.previewQimg = qi
         self.scene.mainPixmap = self.previewQimg
         self.locatePerforation()
         self.makeHistogramDelayed()
         self.makeClippedImage()
-
+        
         
     def makeHistogramDelayed(self):
         if self.histogramTimer.isActive():
@@ -809,48 +862,27 @@ class SetupJob( QtGui.QWidget ):
         self.ui.lblPerforationInfo.setText(text)
 
 
-    def nudgeFilmFwd( self ):
-        # Nudge film a few steps
-        print("Nudge forward")
-        self.tc.steps_forward(20)
-        self.finishedMovingFilm.emit()
-        
-    def nudgeFilmBack( self ):
-        print("Nudge backward")
-        self.tc.steps_back(20)
-        self.finishedMovingFilm.emit()
-        
     @property
     def transport(self):
-        stepsFwd = self._transport['stepsFwd']
-        stepsBack = self._transport['stepsBack'] 
+        stepsPerFrame = self._transport['stepsPerFrame']
         pixelsPerStep = self._transport['pixelsPerStep']
-        return ( stepsFwd, stepsBack, pixelsPerStep )
+        return ( stepsPerFrame, pixelsPerStep )
 
     @transport.setter
     def transport(self,val):
-        stepsFwd, stepsBack, pixelsPerStep = val
-        self.stepsFwd = stepsFwd
-        self.stepsBack = stepsBack
+        steps, pixelsPerStep = val
+        self.stepsPerFrame = steps
         self.pixelsPerStep = pixelsPerStep
 
     @property
-    def stepsFwd(self):
-        return self._transport['stepsFwd']
+    def stepsPerFrame(self):
+        return self._transport['stepsPerFrame']
     
-    @stepsFwd.setter
-    def stepsFwd(self,val):
-        self._transport['stepsFwd'] = val
+    @stepsPerFrame.setter
+    def stepsPerFrame(self,val):
+        self._transport['stepsPerFrame'] = val
         self.ui.lblStepsFrameFwd.setText( "{}".format(val) )
-
-    @property
-    def stepsBack(self):
-        return self._transport['stepsBack']
-    
-    @stepsBack.setter
-    def stepsBack(self,val):
-        self._transport['stepsBack'] = val
-        self.ui.lblStepsFrameBack.setText( "{}".format(val) )
+        self.ui.lblStepsFrameBack.setText( "" )
 
     @property
     def pixelsPerStep(self):
@@ -861,7 +893,6 @@ class SetupJob( QtGui.QWidget ):
         val = min(10, max(0.25,val) )
         self._transport['pixelsPerStep'] = val
         self.ui.lblStepsPixel.setText( "{:.2f}".format(val) )
-
 
     def centreFrame(self, usePixelsPerStep=True):
         # Attempt to centre the frame on the perforation 
@@ -878,34 +909,34 @@ class SetupJob( QtGui.QWidget ):
             img = self.camera.take_picture()
             self.pf.find(img)
             if self.pf.found:
-                stepsDiff = int( max(5,abs(self.pf.yDiff/pixelsPerStep)))
+                stepsDiff = int( max(2,abs(self.pf.yDiff/pixelsPerStep)))
                 print( 'yDiff: {} stepsDiff: {}'.format( self.pf.yDiff, stepsDiff ) )
                 if self.pf.yDiff > 5:
-                    self.tc.steps_forward( stepsDiff )
+                    self.tc.stepForward( stepsDiff )
                 elif self.pf.yDiff < -5:
-                    self.tc.steps_back( stepsDiff )
+                    self.tc.stepBackward( stepsDiff )
                 else:
                     # Pretty close to the centre
                     done = True
             else:
                 # No perforation found so step forward a larger number 
                 # of steps to get a perforation into the ROI
-                self.tc.steps_forward( 60 )
+                self.tc.stepForward( 60 )
 
     def displayText( self, text, label=None ):
         if label != None:
-            label.setText( 'Please wait...' )
+            label.setText( text )
             print( text )
             label.repaint()
             QtGui.QApplication.processEvents()
             time.sleep(0.005)
 
-    def stepsPerFrame(self,frames=18,d=True,label=None):
+    def findStepsPerFrame(self,frames=18,d=True,label=None):
         pf = self.pf
         tc = self.tc
         camera = self.camera
         self.displayText( 'Please wait...', label )
-        tc.tension_film()
+        #tc.tensionFilm()
         self.centreFrame( usePixelsPerStep=False )
         if not pf.found:
             self.displayText( "No perforation available", label )
@@ -917,26 +948,26 @@ class SetupJob( QtGui.QWidget ):
         # Get an estimate for a first frame
         # move until perforation is no longer detected
         while pf.found:
-            tc.steps_forward(longStep) if d else tc.steps_back(longStep)
+            tc.stepForward(longStep) if d else tc.stepBackward(longStep)
             steps += longStep
             img = camera.take_picture()
             pf.find( img )
         # now move until we find perforation
         while not pf.found:
-            tc.steps_forward(longStep) if d else tc.steps_back(longStep)
+            tc.stepForward(longStep) if d else tc.stepBackward(longStep)
             steps += longStep
             img = camera.take_picture()
             pf.find( img )
         # Take short steps until it's close to the centre
         if d:
             while pf.yDiff > 0:
-                tc.steps_forward( shortStep )
+                tc.stepForward( shortStep )
                 steps += shortStep
                 img = camera.take_picture()
                 pf.find( img )
         else:
             while pf.yDiff < 0:
-                tc.steps_back( shortStep )
+                tc.stepBackward( shortStep )
                 steps += shortStep
                 img = camera.take_picture()
                 pf.find( img )
@@ -945,11 +976,11 @@ class SetupJob( QtGui.QWidget ):
         self.pixelsPerStep = pixelsPerFrame / steps
         # Now refine over a number of frames
         failures = 0
-        tc.tension_film()
+        tc.tensionFilm()
         while len(counts) < frames and failures < 3:
             self.displayText( "{} of {}".format(len(counts),frames), label )
             self.centreFrame()
-            tc.steps_forward( steps ) if d else tc.steps_back( steps )
+            tc.stepForward( steps ) if d else tc.stepBackward( steps )
             img = camera.take_picture()
             pf.find( img )
             if pf.found:
@@ -964,13 +995,13 @@ class SetupJob( QtGui.QWidget ):
                 failures += 1
                 print "**** failed :-("
         if failures < 3:
-            #aveSteps = int(round(sum(counts)/float(len(counts))))
-            aveSteps = np.median(counts)
+            aveSteps = round(sum(counts)/float(len(counts)),2)
+            #aveSteps = np.median(counts)
             print('Steps per frame:')
             print('Ave steps over {} frames is {}'.format(len(counts),aveSteps))
             print('Min:{} Max:{}'.format(min(counts),max(counts)))
             print counts
-            return int( round(aveSteps) )
+            return round(aveSteps,2)
         else:
             return 0
 
@@ -981,31 +1012,56 @@ class SetupJob( QtGui.QWidget ):
         pf = self.pf
         self.ui.btnCalibrate.setEnabled(False)
         #steps per frame forward
-        fwd = self.stepsPerFrame( frames=18, d=True, label=self.ui.lblStepsFrameFwd )
+        self.tc.setQuietMode(True)
+        fwd = self.findStepsPerFrame( frames=18, d=True, label=self.ui.lblStepsFrameFwd )
         if fwd > 0: 
-            self.stepsFwd = fwd
+            self.stepsPerFrame = fwd
             # Refine steps per pixel
             pixelsPerFrame = pf.expectedSize[1]*pf.frameHeightMultiplier[pf.filmType]
             pxFwd = pixelsPerFrame / fwd
             #steps per frame back
-            back = self.stepsPerFrame( frames=18, d=False, label=self.ui.lblStepsFrameBack )
+            back = self.findStepsPerFrame( frames=18, d=False, label=self.ui.lblStepsFrameBack )
             if back > 0: 
-                self.stepsBack = back
+                self.stepsPerFrame = round( (fwd + back) / 2, 2 )
                 pxBack = pixelsPerFrame / back
-                self.pixelsPerStep = (pxFwd + pxBack) / 2
+                self.pixelsPerStep = round( (pxFwd + pxBack) / 2, 2 )
             else:
                 self.ui.lblStepsFrameBack.setText('Failed...')
         else:
             self.ui.lblStepsFrameFwd.setText('Failed...')
- 
+        self.tc.setQuietMode(False)
+        self.tc.finishedStepping.emit()
         self.ui.btnCalibrate.setEnabled(True)
-        #self.centreFrame()
-        self.finishedMovingFilm.emit()
 
-    
-            
+    @QtCore.Slot(int)
+    def jumpForward(self,frames):
+        # Move to next frame
+        steps = self.stepsPerFrame * frames
+        if self.pf.found:
+            # Adjust for offset from centre of ROI
+            diff = self.pf.yDiff 
+            steps = steps + (diff/self.pixelsPerStep)
+        print('Moving %d steps'%(steps))
+        self.tc.stepForward(int(round(steps)))
+
+    @QtCore.Slot(int)
+    def jumpBack(self,frames):
+        # Fast move backwards
+        # Move to next frame
+        steps = self.stepsPerFrame * frames
+        if self.pf.found:
+            diff = self.pf.yDiff # Pixels of centre of perf to centre of ROI
+            steps = steps - diff/self.pixelsPerStep
+        print('Moving %d steps'%(steps))
+        self.tc.stepBackward(int(round(steps)))
+
+
+    @QtCore.Slot()
     def stopAndCentre(self):
+        self.tc.setQuietMode()
+        self.tc.stopStepping()
         self.centreFrame()
-        self.finishedMovingFilm.emit()
+        self.tc.setQuietMode(False)
+        self.updatePicture()
         
     

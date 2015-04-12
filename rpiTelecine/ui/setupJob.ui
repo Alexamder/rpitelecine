@@ -424,8 +424,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>175</width>
-           <height>223</height>
+           <width>180</width>
+           <height>226</height>
           </rect>
          </property>
          <property name="maximumSize">
@@ -602,15 +602,29 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>235</width>
-           <height>121</height>
+           <width>260</width>
+           <height>257</height>
           </rect>
          </property>
          <attribute name="label">
-          <string>E&amp;xposure</string>
+          <string>Camera &amp;Setttings</string>
          </attribute>
          <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="1">
+           <widget class="QLabel" name="lblShutter">
+            <property name="text">
+             <string>Shutter</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="1">
+           <widget class="QLabel" name="lblGainR">
+            <property name="text">
+             <string>Red gain</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
            <widget class="QDoubleSpinBox" name="spinGainR">
             <property name="decimals">
              <number>3</number>
@@ -629,37 +643,14 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblShutter">
-            <property name="text">
-             <string>Shutter</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
+          <item row="2" column="1">
            <widget class="QLabel" name="lblGainB">
             <property name="text">
              <string>Blue gain</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinShutter">
-            <property name="minimum">
-             <number>100</number>
-            </property>
-            <property name="maximum">
-             <number>99999</number>
-            </property>
-            <property name="singleStep">
-             <number>25</number>
-            </property>
-            <property name="value">
-             <number>2500</number>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
+          <item row="2" column="3">
            <widget class="QDoubleSpinBox" name="spinGainB">
             <property name="decimals">
              <number>3</number>
@@ -678,14 +669,56 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblGainR">
+          <item row="3" column="1" colspan="2">
+           <widget class="QCheckBox" name="chkShowClipped">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
             <property name="text">
-             <string>Red gain</string>
+             <string>Show clipped pixels</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item row="5" column="1">
+           <widget class="QLabel" name="lblSharpness">
+            <property name="text">
+             <string>Sharpness</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spinShutter">
+            <property name="minimum">
+             <number>100</number>
+            </property>
+            <property name="maximum">
+             <number>99999</number>
+            </property>
+            <property name="singleStep">
+             <number>25</number>
+            </property>
+            <property name="value">
+             <number>2500</number>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="3">
+           <widget class="QSpinBox" name="spinSharpness">
+            <property name="minimum">
+             <number>-100</number>
+            </property>
+            <property name="maximum">
+             <number>100</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
            <spacer name="verticalSpacer_5">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -698,13 +731,49 @@
             </property>
            </spacer>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="chkShowClipped">
-            <property name="layoutDirection">
-             <enum>Qt::LeftToRight</enum>
+          <item row="6" column="3">
+           <widget class="QSpinBox" name="spinContrast">
+            <property name="minimum">
+             <number>-100</number>
             </property>
+            <property name="maximum">
+             <number>100</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLabel" name="lblContrast">
             <property name="text">
-             <string>Show clipped pixels</string>
+             <string>Contrast</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QLabel" name="lblSharpness_3">
+            <property name="text">
+             <string>Saturation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QSpinBox" name="spinSaturation">
+            <property name="minimum">
+             <number>-100</number>
+            </property>
+            <property name="maximum">
+             <number>100</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+            <property name="value">
+             <number>0</number>
             </property>
            </widget>
           </item>
@@ -715,8 +784,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>250</width>
-           <height>132</height>
+           <width>245</width>
+           <height>134</height>
           </rect>
          </property>
          <attribute name="label">
@@ -793,7 +862,7 @@
            <x>0</x>
            <y>0</y>
            <width>260</width>
-           <height>226</height>
+           <height>223</height>
           </rect>
          </property>
          <property name="sizePolicy">
@@ -894,21 +963,14 @@
             <item row="4" column="0">
              <widget class="QLabel" name="lblStepsFrame">
               <property name="text">
-               <string>Steps/Frame Fwd</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="lblStepsFrame_2">
-              <property name="text">
-               <string>Steps/Frame Back</string>
+               <string>Steps/Frame</string>
               </property>
              </widget>
             </item>
             <item row="6" column="1">
              <widget class="QLabel" name="lblStepsFrameBack">
               <property name="text">
-               <string>285</string>
+               <string>-</string>
               </property>
              </widget>
             </item>
@@ -938,7 +1000,7 @@
            <x>0</x>
            <y>0</y>
            <width>255</width>
-           <height>156</height>
+           <height>173</height>
           </rect>
          </property>
          <attribute name="label">

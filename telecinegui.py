@@ -8,14 +8,20 @@ import atexit
 from PySide.QtCore import QSettings
 from PySide import QtCore, QtGui 
 
-from rpiTelecine import ( TelecineCamera, TelecineControl, TelecinePerforation )
+from rpiTelecine import ( TelecineCamera, TelecinePerforation )
 from rpiTelecine.ui.telecineui import *
 from rpiTelecine import ( guiPreview, guiSetupJob )
+from rpiTelecine.guiControl import GuiTelecineControl
 
 camera = TelecineCamera()
 pf  = TelecinePerforation()
-tc  = TelecineControl()
 
+# Use this line if using DC motors for the film spools
+tc = GuiTelecineControl()
+# Use this line if using stepper motors for the film spools
+#tc = GuiTelecineControl(useFourStepper=True)
+
+atexit.register( tc.cleanUp )
 atexit.register(camera.close)
 
 def isTrue(value):
@@ -58,10 +64,11 @@ class ControlMainWindow(QtGui.QMainWindow):
 
         self.livePreview.exposureSaveDefault.connect(self.saveDefaultExposure)
         self.livePreview.exposureUpdated.connect(self.setupJob.updateExposureControls)
-
+        self.livePreview.exposureUpdated.connect( self.setupJob.updatePicture )
+        
         self.ui.tabs.setCurrentIndex( self._setupTab )
 
-        tc.light_on()
+        tc.ledOn()
 
         # Load default and job settings
         self.readDefaultSettings()
@@ -71,11 +78,13 @@ class ControlMainWindow(QtGui.QMainWindow):
         self.setupJob.close() # gracefully close the preview image thread 
         self.writeDefaultSettings()
         self.saveJobSettings()
-        tc.light_off()
+        tc.ledOff()
         event.accept()
 
     def changeTab(self,tab):
         self.setupJob.pauseUpdating( tab!=self._setupTab )
+        if tab==self._setupTab:
+            self.setupJob.updatePicture()
         self.livePreview.activatePreview( tab==self._previewTab )
 
     def moveEvent(self, event):
@@ -164,6 +173,12 @@ class ControlMainWindow(QtGui.QMainWindow):
         gain_r = float(settings.value("gain_r",float(default_gain_r)))
         gain_b = float(settings.value("gain_b",float(default_gain_b)))
         self.setupJob.setCameraExposure( shutter, gain_r, gain_b )
+        sharpness = int(settings.value("sharpness",0))
+        self.setupJob.setCameraSharpness( sharpness )
+        contrast = int(settings.value("contrast",0))
+        self.setupJob.setCameraContrast( contrast )
+        saturation = int(settings.value("saturation",0))
+        self.setupJob.setCameraSaturation( saturation )
         settings.endGroup()
 
         settings.beginGroup( "crop" )
@@ -187,10 +202,9 @@ class ControlMainWindow(QtGui.QMainWindow):
         settings.endGroup()
 
         settings.beginGroup( "transport" )
-        ave_steps_fd = float(settings.value("ave_steps_fd", 300.0) )
-        ave_steps_bk = float(settings.value("ave_steps_bk", 300.0) )
+        steps_per_frame = float(settings.value("steps_per_frame", 300.0) )
         pixels_per_step = float(settings.value("pixels_per_step", 3.0) )
-        self.setupJob.transport = ( ave_steps_fd, ave_steps_bk, pixels_per_step )
+        self.setupJob.transport = ( steps_per_frame, pixels_per_step )
         settings.endGroup()
 
         self.setWindowTitle("rpiTelecine - {}".format(jobName))
@@ -209,9 +223,15 @@ class ControlMainWindow(QtGui.QMainWindow):
             settings.beginGroup( "camera" )
             shutter_speed = camera.shutter_speed
             gain_r, gain_b = camera.awb_gains
+            sharpness = camera.sharpness
+            saturation = camera.saturation
+            contrast = camera.contrast
             settings.setValue("shutter_speed", shutter_speed)
             settings.setValue("gain_r",float(gain_r))
             settings.setValue("gain_b", float(gain_b))
+            settings.setValue("sharpness", sharpness)
+            settings.setValue("saturation", saturation)
+            settings.setValue("contrast", contrast)
             settings.endGroup()
             
             settings.beginGroup( "crop" )
@@ -234,9 +254,8 @@ class ControlMainWindow(QtGui.QMainWindow):
             settings.endGroup()
 
             settings.beginGroup( "transport" )
-            ave_steps_fd, ave_steps_bk, pixels_per_step = self.setupJob.transport
-            settings.setValue("ave_steps_fd", ave_steps_fd)
-            settings.setValue("ave_steps_bk", ave_steps_bk)
+            steps_per_frame, pixels_per_step = self.setupJob.transport
+            settings.setValue("steps_per_frame", steps_per_frame)
             settings.setValue("pixels_per_step", pixels_per_step)
             settings.endGroup()
 

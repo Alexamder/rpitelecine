@@ -116,7 +116,7 @@ class LivePreview( QtGui.QWidget ):
             print('Live preview activated')
             self.saved_camera_zoom = self.camera.zoom
             self.previewActive = True
-            x,y,w,h = self.camera._default_crop
+            x,y,w,h = self.camera.camera_crop
             self.zoomAspect = float(h) / float(w)
             self.updatePreview()
             self.previewDisplayExposure()

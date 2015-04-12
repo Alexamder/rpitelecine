@@ -1,5 +1,8 @@
 # RPi Telecine PySide based control
 #
+# Provides a class that interfaces with the RPiTelecine controller PCB.
+# A thread is used to operate the motors in the background and to keep the 
+# user interface responsive.
 #
 # Copyright (c) 2015, Jason Lane
 # 
@@ -33,7 +36,7 @@ from PySide import QtCore, QtGui
 from rpiTelecine import ( StepperMotor,ReelMotor,LedControl, ShutterRelease )
 import wiringpi2 as wiringpi
 
-FORWARD = True
+FORWARD  = True
 BACKWARD = False
 
 class Stepper(QtCore.QObject):
@@ -42,10 +45,10 @@ class Stepper(QtCore.QObject):
     # Film can be moved backwards and forwards, and the spools moved on a 
     # regular basis.
     # This class uses counters to keep the film wound onto the takeup spools
-    # and counters are used to prevent film 
+    # and counters are used to prevent film bunching up before the gate.
 
-    finished = QtCore.Signal()
-    whileStepping = QtCore.Signal()
+    finished = QtCore.Signal()          # emitted when stepcounter reaches zero
+    whileStepping = QtCore.Signal()     # emitted periodically when stepping
 
     steps = 0
     exiting = False
@@ -82,7 +85,6 @@ class Stepper(QtCore.QObject):
         while not self.exiting:
             time.sleep(0.05)
             while self.steps > 0:
-                self.steps -= 1
                 if self.direction:
                     # FORWARD
                     takeUpCounterFwd = self.doStep( m1,m2,m3,m4,takeUpCounterFwd )
@@ -94,7 +96,9 @@ class Stepper(QtCore.QObject):
                     updateCounter = self.updateCount
                     if not self.quiet:
                         self.whileStepping.emit()
-                if self.steps == 0 and not self.quiet:
+                self.steps -= 1
+                if not(self.quiet) and self.steps < 1:
+                    print("Emitting Finished stepping signal")
                     self.finished.emit()
             while self.winding:
                 # Fast Rewind or wind on film spool motors only
@@ -152,10 +156,14 @@ class Stepper(QtCore.QObject):
         if self.fourStepper:
             self.m3.set_direction(d)
             self.m4.set_direction(d)
-
+            
     @QtCore.Slot(bool)
-    def setQuietmode(quiet = True):
+    def setQuietMode(self,quiet = True):
         self.quiet = quiet
+        if quiet:
+            print( "Setting Quiet Mode")
+        else:
+            print( "Removing Quiet Mode")
 
     @QtCore.Slot()
     def stopStepping(self):
@@ -165,7 +173,7 @@ class Stepper(QtCore.QObject):
 
     @QtCore.Slot(int)
     def stepForward(self, steps):
-        if self.direction == BACKWARD:
+        if self.direction != FORWARD:
             self.direction = FORWARD
             self.setDirection()
             self.steps = 0
@@ -174,12 +182,24 @@ class Stepper(QtCore.QObject):
 
     @QtCore.Slot(int)
     def stepBackward(self, steps):
-        if self.direction == FORWARD:
+        if self.direction != BACKWARD:
             self.direction = BACKWARD
             self.setDirection()
             self.steps = 0
         self.steps += steps
         self.winding = False
+
+    @QtCore.Slot()
+    def tensionFilm(self):
+        # Run pulley motors in opposite directions to tension film
+        self.stopStepping()
+        time.sleep(0.1)
+        self.m1.set_direction(BACKWARD)
+        self.m2.set_direction(FORWARD)
+        for step in xrange(1,20):
+            self.m1.step()
+            self.m2.step()
+        self.setDirection()
 
     @QtCore.Slot()
     def close(self):
@@ -269,8 +289,9 @@ class GuiTelecineControl(QtCore.QObject):
         sw = self.stepperWorker
         self.stepBackward = sw.stepBackward
         self.stepForward = sw.stepForward
+        self.tensionFilm = sw.tensionFilm
         self.stopStepping = sw.stopStepping
-        self.setQuietmode = sw.setQuietmode
+        self.setQuietMode = sw.setQuietMode
         self.finishedStepping = sw.finished
         self.whileStepping = sw.whileStepping
         self.rewind = sw.rewind

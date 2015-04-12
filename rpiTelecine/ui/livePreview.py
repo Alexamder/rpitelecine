@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'livePreview.ui'
 #
-# Created: Sun Mar 29 13:43:07 2015
+# Created: Sun Apr 12 21:01:20 2015
 #      by: pyside-uic 0.2.13 running on PySide 1.1.1
 #
 # WARNING! All changes made in this file will be lost!
