@@ -3,6 +3,8 @@
 This project consists of code and models for an 8mm film scanner project based around a Raspberry Pi model B and camera module.
 Most of the code is written in Python.
 
+This project is licensed under the 3-Clause BSD License.
+
 The project is designed to be able to reliably capture each frame of a reel of 8mm film 
 (Super 8 or Standard 8) as a high quality photo. Bracketing is possible to cope with underexposed
 or dense film.
