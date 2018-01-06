@@ -11,7 +11,7 @@
 # 	can be used as GPIOs
 # 	
 # Version 1 of the PCB is 10x10cm with pin headers for the motors,
-# 2 x power LEDs, Raspberry Pi model B and GPIO. Wiringpi2 is used
+# 2 x power LEDs, Raspberry Pi model B and GPIO. Wiringpi is used
 # for control. The PCB takes a 3A+ 12V power supply, and provides
 # power for the Pi using the 5V pin of the Pi's GPIO header.
 # For the two power LEDs, XPPower LDU0516S350 (or similar with
@@ -24,7 +24,7 @@
 # The LED power and DC motors are switched using Mosfets.
 #
 # Prerequisites: 
-#   Wiringpi2 for Python
+#   Wiringpi for Python
 #   SPI needs to be enabled from raspi-config so the correct kernel 
 #   modules are loaded on boot.
 #
