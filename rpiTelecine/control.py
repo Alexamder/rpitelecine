@@ -57,7 +57,7 @@
 
 
 from __future__ import division
-from wiringpi2 import *
+from wiringpi import *
 
 class tcControl():
     
