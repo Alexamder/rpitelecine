@@ -86,7 +86,7 @@ class TelecineCamera( PiCamera ):
     def camera_crop(self, crop ):
         # Save the crop applied by default
         x,y,w,h = crop
-        maxX, maxY = self.MAX_IMAGE_RESOLUTION
+        maxX, maxY = self.MAX_RESOLUTION
         x = min( max( x, 0 ), maxX-100 )
         y = min( max( y, 0 ), maxY-100 )
         w = min( max( w, 100 ), maxX-x )
