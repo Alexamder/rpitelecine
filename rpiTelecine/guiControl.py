@@ -34,7 +34,7 @@
 import time
 from PySide import QtCore, QtGui 
 from rpiTelecine import ( StepperMotor,ReelMotor,LedControl, ShutterRelease )
-import wiringpi2 as wiringpi
+import wiringpi
 
 FORWARD  = True
 BACKWARD = False

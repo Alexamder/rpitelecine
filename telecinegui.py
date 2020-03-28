@@ -118,7 +118,7 @@ class ControlMainWindow(QtGui.QMainWindow):
         self.setupJob.setCameraExposure( shutter=settings.value("shutter_speed", 2000), 
                                        gain_r=settings.value("gain_r",1.0),
                                        gain_b=settings.value("gain_b",1.0) )
-        x,y,w,h = settings.value( "defaultCrop", (0,0, camera.MAX_IMAGE_RESOLUTION[0],camera.MAX_IMAGE_RESOLUTION[1]) )
+        x,y,w,h = settings.value( "defaultCrop", (0,0, camera.MAX_RESOLUTION[0],camera.MAX_RESOLUTION[1]) )
         camera.camera_crop = ( int(x),int(y),int(w),int(h) )
         settings.endGroup()
         

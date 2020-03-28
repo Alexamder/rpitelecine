@@ -59,7 +59,7 @@ class TelecineCamera( PiCamera ):
     def __init__(self):
         super(TelecineCamera, self).__init__(sensor_mode=2)
         # Fixed settings
-        self.resolution = self.MAX_IMAGE_RESOLUTION # 2592x1944
+        self.resolution = self.MAX_RESOLUTION # 2592x1944
         self.zoom = (0.0,0.0,1.0,1.0)
         self.framerate = 15              # Maximum allowed for full frame stills/preview/video 
         self.iso=100                     # Fix ISO for minimum sensor gain
@@ -67,7 +67,7 @@ class TelecineCamera( PiCamera ):
         self.image_effect = 'none'
         self.sharpness = 0               # Reduce sharpening to minimum. Too much sharpening introduces artefacts into image
         self.vflip=True
-        self.camera_crop = (0,0, self.MAX_IMAGE_RESOLUTION[0],self.MAX_IMAGE_RESOLUTION[1])
+        self.camera_crop = (0,0, self.MAX_RESOLUTION[0],self.MAX_RESOLUTION[1])
  
     def setup_cam(self,shutter, awb_gains):
         """ 
@@ -86,7 +86,7 @@ class TelecineCamera( PiCamera ):
     def camera_crop(self, crop ):
         # Save the crop applied by default
         x,y,w,h = crop
-        maxX, maxY = self.MAX_IMAGE_RESOLUTION
+        maxX, maxY = self.MAX_RESOLUTION
         x = min( max( x, 0 ), maxX-100 )
         y = min( max( y, 0 ), maxY-100 )
         w = min( max( w, 100 ), maxX-x )

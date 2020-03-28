@@ -24,7 +24,7 @@
 # The LED power and DC motors are switched using Mosfets.
 #
 # Prerequisites: 
-#   Wiringpi2 for Python
+#   Wiringpi for Python
 #   SPI needs to be enabled from raspi-config so the correct kernel 
 #   modules are loaded on boot.
 #
@@ -57,7 +57,7 @@
 
 
 from __future__ import division
-from wiringpi2 import *
+from wiringpi import *
 import time
 
 class TelecineControl():
@@ -219,7 +219,8 @@ class StepperMotor():
     whole step
     """
 
-    delay = 1 # Big Easy Driver requires a pulse of 1uS or longer.
+    # delay = 1 # Big Easy Driver requires a pulse of 1uS or longer.
+    delay = 2 # DRV8825 requires a pulse of 2uS or longer.
     motor_on = False
     
    
