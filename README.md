@@ -19,16 +19,6 @@ Futher information is available in this Github repository:
 
 ![Overview of RPI telecine](images/overview.png)
 
-## Video
-
-Some test transfers are on Youtube:
-
-* Overview: http://youtu.be/xm3jTsKSOtE
-* London to Brighton: http://youtu.be/7-SdT0FMGkM
-* Derby Day: http://youtu.be/9bVeMD78gXc
-* Blackpool illuminations: http://youtu.be/ZH1QqgxNLk8
-* Wings of Speed: http://youtu.be/DhBY11DGUps
-
 ## Acknowledgements
 
 Thanks to [Raspberry Pi](http://raspberrypi.org) for a splendid little computer and excellent camera module!
